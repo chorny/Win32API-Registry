@@ -1,4 +1,6 @@
 # This should eventually become part of MakeMaker as ExtUtils::Mkconst2perl.
+# Documentation for this is very skimpy at this point.  Full documentation
+# will be added to ExtUtils::Mkconst2perl when it is created.
 package ExtUtils::Myconst2perl;
 
 use strict;
@@ -36,10 +38,10 @@ sub ParseAttribs
     my( $pkg, $hvAttr, $hvRequests )= @_;
     my( $outfile, @perlfiles, %perlfilecodes, @cfiles, %cfilecodes );
     my @importlist= @{$hvAttr->{IMPORT_LIST}};
-    my $perlcode= $hvAttr->{PERL_CE_CODE} ||
+    my $perlcode= $hvAttr->{PERL_PE_CODE} ||
 	'last if /^\s*(bootstrap|XSLoader::load)\b/';
-    my $ccode= $hvAttr->{C_CE_CODE} ||
-	'last if /^\s*MODULE\b/';
+    my $ccode= $hvAttr->{C_PE_CODE} ||
+	'last if m#/[/*]\s*CONSTS_DEFINED\b|^\s*MODULE\b#';
     my $ifdef= $hvAttr->{IFDEF} || 0;
     my $writeperl= !! $hvAttr->{WRITE_PERL};
     my $export= !! $hvAttr->{DO_EXPORT};
@@ -49,6 +51,7 @@ sub ParseAttribs
     my $object= "";
     my $binary= "";
     my $final= "";
+    my $norebuild= "";
     my $subroutine= "";
     my $base;
     my %params= (
@@ -72,7 +75,14 @@ sub ParseAttribs
 	OBJECT => \$object,
 	BINARY => \$binary,
 	FINAL_PERL => \$final,
+	NO_REBUILD => \$norebuild,
     );
+    {   my @err= grep {! defined $params{$_}} keys %$hvAttr;
+	carp "ExtUtils::Myconst2perl::ParseAttribs:  ",
+	  "Unsupported option(s) (@err).\n"
+	  if  @err;
+    }
+    $norebuild= $hvAttr->{NO_REBUILD}   if  exists $hvAttr->{NO_REBUILD};
     my $module= ( split /::/, $pkg )[-1];
     $base= "c".$module;
     $base= $hvAttr->{BASEFILENAME}   if  exists $hvAttr->{BASEFILENAME};
@@ -95,10 +105,6 @@ sub ParseAttribs
 	$subroutine =~ s/\W/_/g;
     } else {
 	$outfile= $base . ".h";
-	delete $hvAttr->{C_PE_CODE};
-	delete $hvAttr->{C_FILE_LIST};
-	delete $hvAttr->{C_FILE_CODES};
-	delete $hvAttr->{C_FILES};
     }
     $outfile= $hvAttr->{OUTFILE}   if  $hvAttr->{OUTFILE};
     if(  $hvAttr->{PERL_FILES}  ) {
@@ -122,7 +128,9 @@ sub ParseAttribs
     for my $file (  @perlfiles  ) {
 	$perlfilecodes{$file}= $perlcode  if  ! $perlfilecodes{$file};
     }
-    if(  $hvAttr->{C_FILES}  ) {
+    if(  ! $subroutine  ) {
+	; # Don't process any C source code files.
+    } elsif(  $hvAttr->{C_FILES}  ) {
 	carp "ExtUtils::Myconst2perl:  C_FILES option not allowed ",
 	  "with C_FILE_LIST nor C_FILE_CODES.\n"
 	  if  $hvAttr->{C_FILE_LIST}  ||  $hvAttr->{C_FILE_CODES};
@@ -145,7 +153,7 @@ sub ParseAttribs
     for my $key (  keys %$hvRequests  ) {
 	if(  ! $params{$key}  ) {
 	    carp "ExtUtils::Myconst2perl::ParseAttribs:  ",
-	      "Unsupported option ($key).\n";
+	      "Unsupported output ($key).\n";
 	} elsif(  "SCALAR" eq ref( $params{$key} )  ) {
 	    ${$hvRequests->{$key}}= ${$params{$key}};
 	} elsif(  "ARRAY" eq ref( $params{$key} )  ) {
@@ -218,10 +226,12 @@ sub Myconst2perl
 	#print "#define main _main_proto"
 	#  " /* Ignore Perl's main() prototype */\n\n";
 	if(  $writeperl  ) {
-	    if(  ! $Config{useperlio}  ) {
+	    # Here are more reasons why the WRITE_PERL option is discouraged.
+	    if(  $Config{useperlio}  ) {
 		print "#define PERLIO_IS_STDIO 1\n";
 	    }
-	    print "#define WIN32IO_IS_STDIO 1\n";
+	    print "#define WIN32IO_IS_STDIO 1\n";	# May cause a warning
+	    print "#define NO_XSLOCKS 1\n";	# What a hack!
 	}
 	foreach $file (  @cfile  ) {
 	    warn "Reading C file, $file:  $ccode{$file}\n";
@@ -285,7 +295,9 @@ sub Myconst2perl
 	$head= " *"   if  ! $writeperl;
 	my $key;
 	foreach $key (  sort keys %spec  ) {
-	    print $head, "    $key => ", neatvalue($spec{$key}), $tail;
+	    my $val= neatvalue($spec{$key});
+	    $val =~ s/\\/\\\\/g   if  $writeperl;
+	    print $head, "    $key => ", $val, $tail;
 	}
 	print $head, " Perl files eval'd:", $tail;
 	foreach $key (  @perlfile  ) {

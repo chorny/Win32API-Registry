@@ -7,15 +7,15 @@ use strict;
 WriteMakefile(
     'NAME'		=> 'Win32API::Registry',
     'VERSION_FROM'	=> 'Registry.pm',	# finds $VERSION
-    (  $] < 5.005  ?  ()  :  ( 'CAPI' => 'TRUE' )  ),
+    (  $] < 5.005  ||  5.006 <= $]   ?  ()  :  ( 'CAPI' => 'TRUE' )  ),
     (  $] < 5.007  ?  'postamble'  :  'CONST2PERL'  )
-	#=> { 'Win32API::Registry'
-    			=> { IMPORT_LIST => [qw(/._/ !/[a-z]/)],
-			     CPLUSPLUS => 1,
-			     WRITE_PERL => 1,
-			     IFDEF => q{ /^SE_/ ? '__cplusplus' : /REG_/ },
-			   },
-	   #},
+		=> { IMPORT_LIST => [qw(/._/ !/[a-z]/)],
+		     IFDEF => q{ /^SE_/ ? '__cplusplus' : /REG_/ },
+		     CPLUSPLUS => 1,
+		     WRITE_PERL => 1,
+		     # Comment out next line to rebuild constants defs:
+		     NO_REBUILD => 1,
+		   },
     (  ! $Config{libperl}  ?  ()  :  ( LIBPERL_A => $Config{libperl} )  ),
 );
 
@@ -41,12 +41,13 @@ sub MY::postamble
 
     my( $module, @m, $_final, @clean, @realclean );
     foreach $module (  keys %$hvAttr  ) {
-	my( $outfile, @perlfiles, @cfiles, $bin, $obj, $final );
+	my( $outfile, @perlfiles, @cfiles, $bin, $obj, $final, $noreb );
 
 	# Translate user-friendly options into coder-friendly specifics:
 	ParseAttribs( $module, $hvAttr->{$module}, { OUTFILE => \$outfile,
 	  C_FILE_LIST => \@perlfiles, PERL_FILE_LIST => \@cfiles,
-	  OBJECT => \$obj, BINARY => \$bin, FINAL_PERL => \$final } );
+	  OBJECT => \$obj, BINARY => \$bin, FINAL_PERL => \$final,
+	  NO_REBUILD => \$noreb } );
 	die "IFDEF option in Makefile.PL must be string, not code ref.\n"
 	  if  ref $hvAttr->{$module}->{IFDEF};
 	die qq{IFDEF option in Makefile.PL must not contain quotes (").\n}
@@ -58,10 +59,12 @@ $outfile:	@perlfiles  @cfiles  Makefile" . '
 	$(PERL) "-I$(PERL_ARCHLIB)" "-I$(PERL_LIB)" -MExtUtils::Myconst2perl \\
 	  -e "my %attribs;" \\
 	  ';
+	$m[-1] =~ s/^/##/gm   if  $noreb;
 	my( $key, $value );
 	while(  ( $key, $value )= each %{$hvAttr->{$module}}  ) {
 	    push @m, '-e "$$attribs{' . $key . '}= '
 	      . neatvalue($value) . qq[;" \\\n\t  ];
+	    $m[-1] =~ s/^/##/gm   if  $noreb;
 	}
 	push @m, '-e "Myconst2perl(' . neatvalue($module) . ",%attribs)\"\n";
 
@@ -81,6 +84,7 @@ $bin:	$outfile" . '
 
 $final: $bin
 	" .  $self->catfile(".",$bin) . " >$final\n";
+	    $m[-1] =~ s/^/##/gm   if  $noreb;
 
 	    # Make sure the rarely-used $(INST_ARCHLIB) directory exists:
 	    push @m, $self->dir_target('$(INST_ARCHLIB)');
@@ -100,13 +104,13 @@ ${_final}_to_blib: $final
 	@$(TOUCH) ',$final,"\n";
 
 	    push( @clean, $outfile, $bin, $obj );
-	    #TEMP# push( @realclean, $final );
+	    push( @realclean, $final )   unless  $noreb;
 	} else {
 
 	    ##my $name= ( split /::/, $module )[-1];
 	    ##warn qq{$name.xs should C<#include "$final"> },
 	    ##  qq{in the C<BOOT:> section\n};
-	    #TEMP# push( @realclean, $outfile );
+	    push( @realclean, $outfile )   unless  $noreb;
 	}
     }
 

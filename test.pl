@@ -7,7 +7,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..210\n"; }
+BEGIN { $| = 1; print "1..211\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Win32API::Registry qw(:ALL);
 $loaded = 1;
@@ -381,8 +381,7 @@ foreach $func ( @{$Win32API::Registry::EXPORT_TAGS{FuncA}},
 }
 
 foreach $const ( keys(%consts) ) {
-    $!= 0;
-    $ok= eval("$const()") || 0==$!;
+    $ok= eval("my \$x= $const(); 1");
     $Debug && !$ok && warn "# Constant $const: $@\n";
     print $ok ? "" : "not ", "ok ", ++$test, "\n";
 }

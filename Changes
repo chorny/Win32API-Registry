@@ -1,5 +1,16 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.21  Fri Apr  7 22:32:18 2000
+	- For C<void *vp; UV u>, C<u= U_V(vp)> corrected to C<u= (UV)(vp)>.
+	- Makefile no longer tries to rebuild constant definitions.
+	- Remove warning and fatal error from C<sub constant>.
+	- Added C</*CONSTS_DEFINED*/> to fix "WRITE_PERL=>0,CPLUSPLUS=>1" case.
+	- Added C<regConstant()> with better interface than C<constant()>.
+	- For C<BOOL> output, return C<PL_sv_no> [or a non-zero integer].
+	- For C<BOOL> input, treat C<"yes"> as true instead of as C<0>.
+	- Quietly translate C<[]> to C<0> for all integral arguments.
+	- C<AllowPriv()> and C<*SystemShutdown()> now set C<regLastError()>.
+
 0.20  Mon Mar 20 15:17:59 2000
 	- Use ppport.h from Devel::PPPort [C<na> changed to C<PL_na>].
 	- Improved how constants are done based on Perl5Porters suggestions

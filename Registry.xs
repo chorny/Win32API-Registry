@@ -1,16 +1,26 @@
 /* Win32API/Registry.xs */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
 /*#include "patchlevel.h"*/
 
 /* Uncomment the next line unless set "WRITE_PERL=>1" in Makefile.PL: */
-/*#define NEED_newCONSTSUB*/
+#define NEED_newCONSTSUB
 #include "ppport.h"
 
 #define  WIN32_LEAN_AND_MEAN	/* Tell windows.h to skip much */
 #include <windows.h>
+
+#ifdef __cplusplus
+}
+#endif
+
+/*CONSTS_DEFINED*/
 
 #define oDWORD	DWORD
 #define oHKEY	HKEY
@@ -135,10 +145,13 @@ AllowPriv( sPrivName, bEnable )
 		RETVAL= TRUE;
 	    }
 	}
-	if(  ! RETVAL  &&  INVALID_HANDLE_VALUE != hToken  ) {
-	  DWORD uErr= GetLastError();
-	    CloseHandle( hToken );
-	    SetLastError( uErr );
+	if(  ! RETVAL  ) {
+	    if(  INVALID_HANDLE_VALUE != hToken  ) {
+		DWORD uErr= GetLastError();
+		CloseHandle( hToken );
+		SetLastError( uErr );
+	    }
+	    uLastRegErr= GetLastError();
 	}
     OUTPUT:
 	RETVAL
@@ -147,11 +160,25 @@ AllowPriv( sPrivName, bEnable )
 BOOL
 AbortSystemShutdownA( sComputerName )
 	char *	sComputerName
+    CODE:
+	RETVAL= AbortSystemShutdownA( sComputerName );
+	if(  ! RETVAL  ) {
+	    uLastRegErr= GetLastError();
+	}
+    OUTPUT:
+	RETVAL
 
 
 BOOL
 AbortSystemShutdownW( swComputerName )
 	WCHAR *	swComputerName
+    CODE:
+	RETVAL= AbortSystemShutdownW( swComputerName );
+	if(  ! RETVAL  ) {
+	    uLastRegErr= GetLastError();
+	}
+    OUTPUT:
+	RETVAL
 
 
 BOOL
@@ -161,6 +188,14 @@ InitiateSystemShutdownA( sComputer, sMessage, uTimeoutSecs, bForce, bReboot )
 	DWORD	uTimeoutSecs
 	BOOL	bForce
 	BOOL	bReboot
+    CODE:
+	RETVAL= InitiateSystemShutdownA(
+	  sComputer, sMessage, uTimeoutSecs, bForce, bReboot );
+	if(  ! RETVAL  ) {
+	    uLastRegErr= GetLastError();
+	}
+    OUTPUT:
+	RETVAL
 
 
 BOOL
@@ -170,6 +205,14 @@ InitiateSystemShutdownW( swComputer, swMessage, uTimeoutSecs, bForce, bReboot )
 	DWORD	uTimeoutSecs
 	BOOL	bForce
 	BOOL	bReboot
+    CODE:
+	RETVAL= InitiateSystemShutdownW(
+	  swComputer, swMessage, uTimeoutSecs, bForce, bReboot );
+	if(  ! RETVAL  ) {
+	    uLastRegErr= GetLastError();
+	}
+    OUTPUT:
+	RETVAL
 
 
 bool

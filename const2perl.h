@@ -130,7 +130,7 @@ class _const2perl {
     }
     void mkconst( char *sName, const void *pValue ) {
 	setuv((UV)pValue);
-	newconst( sName, "0x%"UVxf, U_V(pValue), mpSvNew );
+	newconst( sName, "0x%"UVxf, (UV)(pValue), mpSvNew );
     }
 /*#ifdef HAS_QUAD
  * HAS_QUAD only means pack/unpack deal with them, not that SVs can.

@@ -4,7 +4,7 @@ package Win32API::Registry;
 
 use strict;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS); #@EXPORT_FAIL);
-$VERSION= '0.20';
+$VERSION= '0.21';
 
 require Exporter;
 require DynaLoader;
@@ -12,7 +12,7 @@ require DynaLoader;
 
 @EXPORT= qw();
 %EXPORT_TAGS= (
-    Func =>	[qw(		regLastError
+    Func =>	[qw(		regConstant		regLastError
     	AllowPriv		AbortSystemShutdown	InitiateSystemShutdown
 	RegCloseKey		RegConnectRegistry	RegCreateKey
 	RegCreateKeyEx		RegDeleteKey		RegDeleteValue
@@ -108,14 +108,31 @@ if(  ! defined &REG_NONE  ) {
 #push( @{$EXPORT_TAGS{ALL}}, @{$EXPORT_TAGS{SE_}} )
 #  if  defined &SE_TCB_NAME;
 
+sub regConstant
+{
+    my( $name )= @_;
+    if(  1 != @_  ||  ! $name  ||  $name =~ /\W/  ) {
+	require Carp;
+	Carp::croak( 'Usage: ',__PACKAGE__,'::regConstant("CONST_NAME")' );
+    }
+    my $proto= prototype $name;
+    if(  defined \&$name
+     &&  defined $proto
+     &&  "" eq $proto  ) {
+	no strict 'refs';
+	return &$name;
+    }
+    return undef;
+}
+
 # We provide this for backwards compatibility:
 sub constant
 {
     my( $name )= @_;
-    if(  $name !~ /\W/  &&  defined \&$name
-     &&  ! eval "$name(0); 1"  &&  eval "$name(); 1"  ) {
+    my $value= regConstant( $name );
+    if(  defined $value  ) {
 	$!= 0;
-	return &$name;
+	return $value;
     }
     $!= 11; # EINVAL
     return 0;
@@ -260,15 +277,18 @@ Win32API::Registry - Low-level access to Win32 system API calls from WINREG.H
 
 =head1 SYNOPSIS
 
-  use Win32API::Registry 0.13 qw( :ALL );
+  use Win32API::Registry 0.21 qw( :ALL );
 
   RegOpenKeyEx( HKEY_LOCAL_MACHINE, "SYSTEM\\Disk", 0, KEY_READ, $key );
-    or  die "Can't open HKEY_LOCAL_MACHINE\\SYSTEM\\Disk: $^E\n";
+    or  die "Can't open HKEY_LOCAL_MACHINE\\SYSTEM\\Disk: ",
+	    regLastError(),"\n";
   RegQueryValueEx( $key, "Information", [], $type, $data, [] );
-    or  die "Can't read HKEY_L*MACHINE\\SYSTEM\\Disk\\Information: $^E\n";
+    or  die "Can't read HKEY_L*MACHINE\\SYSTEM\\Disk\\Information: ",
+	    regLastError(),"\n";
   [...]
   RegCloseKey( $key )
-    or  die "Can't close HKEY_LOCAL_MACHINE\\SYSTEM\\Disk: $^E\n";
+    or  die "Can't close HKEY_LOCAL_MACHINE\\SYSTEM\\Disk: ",
+	    regLastError(),"\n";
 
 =head1 DESCRIPTION
 
@@ -418,6 +438,22 @@ you wish to have access to.
 
 C<$phKey> will be set to the handle to be used to access the
 remote Registry key if the call succeeds.
+
+=item regConstant
+
+=item C<$value= regConstant( $sConstantName )>
+
+Fetch the value of a constant.  Returns C<undef> if C<$sConstantName>
+is not the name of a constant supported by this module.  Never sets
+C<$!> nor C<$^E>.
+
+This function is rarely used since you will usually get the value of a
+constant by having that constant imported into your package by listing
+the constant name in the C<use Win32API::Registry> statement and then
+simply using the constant name in your code [perhaps followed by
+C<()>].  This function is useful for verifying constant names not in
+Perl code, for example, after prompting a user to type in a constant
+name.
 
 =item RegCreateKey
 
