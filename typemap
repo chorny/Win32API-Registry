@@ -1,0 +1,50 @@
+BOOL			T_IV
+LONG			T_IV
+DWORD			T_IV
+REGSAM			T_IV
+SECURITY_INFORMATION	T_IV
+char *			T_BUF
+WCHAR *			T_BUF
+BYTE *			T_BUF
+FILETIME *		T_BUF
+void *			T_BUF
+SECURITY_DESCRIPTOR *	T_BUF
+SECURITY_ATTRIBUTES *	T_BUF
+DWORD *			T_IVBUF
+LONG *			T_IVBUF
+HKEY *			T_IVBUFP
+HKEY			T_PTR
+HANDLE			T_PTR
+
+#############################################################################
+INPUT
+T_BUF
+	if(  null_arg($arg)  )
+	    $var= NULL;
+	else
+	    $var= ($type) SvPV( $arg, na )
+T_IVBUF
+	if(  null_arg($arg)  )
+	    $var= NULL;
+	else
+	    *( $var= ($type) _alloca( sizeof(*($var)) ) )= SvIV($arg)
+T_IVBUFP
+	if(  null_arg($arg)  )
+	    $var= NULL;
+	else
+	    *( $var= ($type) _alloca( sizeof(*($var)) ) )= (void *)SvIV($arg)
+T_PTR
+	$var = ($type)SvIV($arg)
+
+#############################################################################
+OUTPUT
+T_BUF
+	;
+T_IVBUF
+	if(  ! null_arg($arg)  &&  ! SvREADONLY($arg)  )
+	    sv_setiv( $arg, (IV)*($var) );
+T_IVBUFP
+	if(  ! null_arg($arg)  &&  ! SvREADONLY($arg)  )
+	    sv_setiv( $arg, (IV)*($var) );
+T_PTR
+	sv_setiv( $arg, (IV)$var );

@@ -1,0 +1,18 @@
+Revision history for Perl extension Win32API::Registry.
+
+0.01  Mon Oct 20 16:54:52 1997
+	- original version; created by h2xs 1.18
+
+0.10  Wed Oct 29 12:11:50 1997
+	- First release (alpha)
+
+0.11  Mon Nov 17 16:30:30 1997
+	- Don't set $! (Perl patched so $^E is used)
+	- Move KEY_NOTIFY to correct block of switch statement.
+	- Like sysread():  sv_setpvn(arg,"",0) if !SvOK(arg).
+	- Change buffer size behavior because DWORD is unsigned.
+	- Allow caller to omit all buffer size arguments.
+	- Don't try to overwrite read-only buffer size arguments.
+
+0.12  Mon Dec 29 09:55:30 1997 
+	- Add AllowPriv() function so can load and save keys.

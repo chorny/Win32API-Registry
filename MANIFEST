@@ -1,0 +1,7 @@
+Changes
+Makefile.PL
+MANIFEST
+Registry.pm
+Registry.xs
+test.pl
+typemap
