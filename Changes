@@ -1,5 +1,27 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.20  Mon Mar 20 15:17:59 2000
+	- Use ppport.h from Devel::PPPort [C<na> changed to C<PL_na>].
+	- Improved how constants are done based on Perl5Porters suggestions
+	  [Added F<ExtUtils/Myconst2perl>, eventually to be part of MakeMaker].
+	- Added SE_* string constants.
+	- Disabled AUTOLOAD and the confusing error messages it generates.
+	- Replaced C<_alloca()> with C<sv_grow(sv_newmortal(),size)>.
+	- Allow support for build environments with no C<VALENTA>/C<VALENTW>.
+	- Use new F<buffers.h> which does typecast so can compile using C++.
+	- Changed MIN_GROW_SIZE from 8 to 128 so buffer sizes less needed.
+	- Update F<README>.
+	- Mention C<regLastError()> anywhere C<$^E> is mentioned.
+	- Repeat true/false return value documentation for each routine.
+	- Handles are now unsigned to match more accurate constant conversions.
+	- Fixed F<test.pl> to use C<regLastError()> instead of C<$^E>.
+
+0.19  Thu Jan  6 16:39 2000 (limited release)
+	- Total and radical revamp of how constants are done.
+
+0.18  Unreleased
+	- Added regLastError() for when C<$^E> gets overwritten too quickly.
+
 0.17  Thu Jul 29 13:38 1999
 	- Fix failure detection for the misdocumented AdjustTokenPrivileges()
 	  that would cause AllowPriv() to sometimes return TRUE on failure.
