@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..137\n"; }
+BEGIN { $| = 1; print "1..139\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Win32API::Registry qw(:ALL);
 $loaded = 1;
@@ -85,7 +85,7 @@ while(  0 == $nvals  ) {
     $Debug  and  warn "LMach\\$path handle is $hkey2.\n";
 
     $ok= RegCloseKey( $hkey );
-    $Debug && !$ok  and  warn "$^E\n";
+    $Debug && !$ok  and  warn "RegCloseKey: $^E\n";
 
     $hkey= $hkey2;
 
@@ -110,6 +110,7 @@ if(  $Debug  ) {
     warn "$_\n";
 }
 print $ok ? "" : "not ", "ok 12\n";
+@valnames= ($name);
 
 $ok= RegEnumValueA( $hkey, $nvals-1, $name, $nlen=$zero,
 		    [], $type, $data, $dlen=0 );
@@ -120,6 +121,7 @@ if(  $Debug  ) {
     warn "$_\n";
 }
 print $ok ? "" : "not ", "ok 13\n";
+push( @valnames, $name );
 
 $ok= (  $nlen == length($name)  &&  $dlen == length($data)  );
 print $ok ? "" : "not ", "ok 14\n";
@@ -137,30 +139,44 @@ $Debug  and  warn "length(data)=",length($data)," length(vdata)=",
   length($vdata), " dlen=$dlen, vdlen=$vdlen.\n";
 print $ok ? "" : "not ", "ok 16\n";
 
-$ok= RegCloseKey( $hkey );
-$Debug && !$ok  and  warn "$^E\n";
+$pValueEnts= pack( " p x4 x4 x4 " x @valnames, @valnames );
+$ok= RegQueryMultipleValues( $hkey, $pValueEnts, 0+@valnames, $buffer, 1 );
 print $ok ? "" : "not ", "ok 17\n";
 
-$ok= ! RegEnumValue( $hkey, 0, $name, $nlen=0, [], $type, $data, $dlen=0 );
+@lens=  unpack( " x4 L x4 x4 " x @valnames, $pValueEnts );
+@types= unpack( " x4 x4 x4 L " x @valnames, $pValueEnts );
+@dat1=  unpack(  join( "", map(" x4 x4 P$_ x4 ",@lens) ), $pValueEnts  );
+@dat2=  unpack( join("",map("a$_",@lens)), $buffer );
+if(  $ok= @dat1==@dat2  ) {
+    for(0..$#dat1) { if( $dat1[$_] ne $dat2[$_] ) { $ok= 0; last; } }
+}
 print $ok ? "" : "not ", "ok 18\n";
+
+
+$ok= RegCloseKey( $hkey );
+$Debug && !$ok  and  warn "$^E\n";
+print $ok ? "" : "not ", "ok 19\n";
+
+$ok= ! RegEnumValue( $hkey, 0, $name, $nlen=0, [], $type, $data, $dlen=0 );
+print $ok ? "" : "not ", "ok 20\n";
 $Debug  and  warn "Using closed key gives:  `$^E'.\n";
 
 $ok= (  $^E =~ /handle/i  &&  $^E =~ /invalid/i  );
-print $ok ? "" : "not ", "ok 19\n";
+print $ok ? "" : "not ", "ok 21\n";
 
 $ok= (  $type == $vtype  &&  $data eq $vdata  );
-print $ok ? "" : "not ", "ok 20\n";
+print $ok ? "" : "not ", "ok 22\n";
 
 $ok=	HKEY_CLASSES_ROOT &&	HKEY_CURRENT_CONFIG &&	HKEY_CURRENT_USER
  &&	HKEY_DYN_DATA &&	HKEY_LOCAL_MACHINE &&	HKEY_PERFORMANCE_DATA
  &&	HKEY_USERS;
-print $ok ? "" : "not ", "ok 21\n";
+print $ok ? "" : "not ", "ok 23\n";
 
 $ok=	KEY_QUERY_VALUE &&	KEY_SET_VALUE &&	KEY_CREATE_SUB_KEY
  &&	KEY_ENUMERATE_SUB_KEYS &&	KEY_NOTIFY &&	KEY_CREATE_LINK
  &&	KEY_READ &&		KEY_WRITE &&		KEY_EXECUTE
  &&	KEY_ALL_ACCESS;
-print $ok ? "" : "not ", "ok 22\n";
+print $ok ? "" : "not ", "ok 24\n";
 
 $ok=	0==REG_OPTION_RESERVED && 0==REG_OPTION_NON_VOLATILE
  &&	REG_OPTION_VOLATILE
@@ -175,165 +191,165 @@ $ok=	0==REG_OPTION_RESERVED && 0==REG_OPTION_NON_VOLATILE
  &&	REG_DWORD_BIG_ENDIAN &&	REG_LINK &&		REG_MULTI_SZ
  &&	REG_RESOURCE_LIST &&	REG_FULL_RESOURCE_DESCRIPTOR
  &&	REG_RESOURCE_REQUIREMENTS_LIST;
-print $ok ? "" : "not ", "ok 23\n";
+print $ok ? "" : "not ", "ok 25\n";
 
 $ok=  ! eval { AbortSystemShutdown( [] ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 24\n";
+print $ok ? "" : "not ", "ok 26\n";
 
 $ok=  ! eval { InitiateSystemShutdown([],[],0,0,0) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 25\n";
+print $ok ? "" : "not ", "ok 27\n";
 
 $ok=  ! eval { RegCloseKey(0) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 26\n";
+print $ok ? "" : "not ", "ok 28\n";
 
 $ok=  ! eval { RegConnectRegistry(":",0,[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 27\n";
+print $ok ? "" : "not ", "ok 29\n";
 
 $ok=  ! eval { RegCreateKey(0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 28\n";
+print $ok ? "" : "not ", "ok 30\n";
 
 $ok=  ! eval { RegCreateKeyEx(0,[],0,[],0,0,[],[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 29\n";
+print $ok ? "" : "not ", "ok 31\n";
 
 $ok=  ! eval { RegDeleteKey(0,[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 30\n";
+print $ok ? "" : "not ", "ok 32\n";
 
 $ok=  ! eval { RegDeleteValue(0,[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 31\n";
+print $ok ? "" : "not ", "ok 33\n";
 
 $ok=  ! eval { RegEnumKey(0,0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 32\n";
+print $ok ? "" : "not ", "ok 34\n";
 
 $ok=  ! eval { RegEnumKey(0,0,[]   ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 33\n";
+print $ok ? "" : "not ", "ok 35\n";
 
 $ok=  ! eval { RegEnumKeyEx(0,0,[],[],[],[],[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 34\n";
+print $ok ? "" : "not ", "ok 36\n";
 
 $ok=  ! eval { RegEnumKeyEx(0,0,[]   ,[],[],   []) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 35\n";
+print $ok ? "" : "not ", "ok 37\n";
 
 $ok=  ! eval { RegEnumValue(0,0,[],[],[],[],[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 36\n";
+print $ok ? "" : "not ", "ok 38\n";
 
 $ok=  ! eval { RegEnumValue(0,0,[]   ,[],[],[]   ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 37\n";
+print $ok ? "" : "not ", "ok 39\n";
 
 $ok=  ! eval { RegFlushKey(0) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 38\n";
+print $ok ? "" : "not ", "ok 40\n";
 
 $ok=  ! eval { RegGetKeySecurity(0,0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 39\n";
+print $ok ? "" : "not ", "ok 41\n";
 
 $ok=  ! eval { RegGetKeySecurity(0,0,[]   ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 40\n";
+print $ok ? "" : "not ", "ok 42\n";
 
 $ok=  ! eval { RegLoadKey(0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 41\n";
+print $ok ? "" : "not ", "ok 43\n";
 
 $ok=  ! eval { RegNotifyChangeKeyValue(0,0,0,[],0) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 42\n";
+print $ok ? "" : "not ", "ok 44\n";
 
 $ok=  ! eval { RegOpenKey(0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 43\n";
+print $ok ? "" : "not ", "ok 45\n";
 
 $ok=  ! eval { RegOpenKeyEx(0,[],0,0,[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 44\n";
+print $ok ? "" : "not ", "ok 46\n";
 
 $ok=  ! eval { RegQueryInfoKey(0,[],[],([])x9) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 45\n";
+print $ok ? "" : "not ", "ok 47\n";
 
 $ok=  ! eval { RegQueryInfoKey(0,[]   ,([])x9) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 46\n";
+print $ok ? "" : "not ", "ok 48\n";
 
 $ok=  ! eval { RegQueryMultipleValues(0,[],0,[]   ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 47\n";
+print $ok ? "" : "not ", "ok 49\n";
 
 $ok=  ! eval { RegQueryMultipleValues(0,[],0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 48\n";
+print $ok ? "" : "not ", "ok 50\n";
 
 $ok=  ! eval { RegQueryValue(0,[],[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 49\n";
+print $ok ? "" : "not ", "ok 51\n";
 
 $ok=  ! eval { RegQueryValue(0,[],[]   ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 50\n";
+print $ok ? "" : "not ", "ok 52\n";
 
 $ok=  ! eval { RegQueryValueEx(0,[],[],[],[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 51\n";
+print $ok ? "" : "not ", "ok 53\n";
 
 $ok=  ! eval { RegQueryValueEx(0,[],[],[],[]   ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 52\n";
+print $ok ? "" : "not ", "ok 54\n";
 
 $ok=  ! eval { RegReplaceKey(0,[],[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 53\n";
+print $ok ? "" : "not ", "ok 55\n";
 
 $ok=  ! eval { RegRestoreKey(0,[],0) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 54\n";
+print $ok ? "" : "not ", "ok 56\n";
 
 $ok=  ! eval { RegSaveKey(0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 55\n";
+print $ok ? "" : "not ", "ok 57\n";
 
 $ok=  ! eval { RegSetKeySecurity(0,0,[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 56\n";
+print $ok ? "" : "not ", "ok 58\n";
 
 $ok=  ! eval { RegSetValue(0,[],0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 57\n";
+print $ok ? "" : "not ", "ok 59\n";
 
 $ok=  ! eval { RegSetValue(0,[],0,[]   ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 58\n";
+print $ok ? "" : "not ", "ok 60\n";
 
 $ok=  ! eval { RegSetValueEx(0,[],0,0,[],[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 59\n";
+print $ok ? "" : "not ", "ok 61\n";
 
 $ok=  ! eval { RegSetValueEx(0,[],0,0,[]   ) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 60\n";
+print $ok ? "" : "not ", "ok 62\n";
 
 $ok=  ! eval { RegUnLoadKey(0,[]) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 61\n";
+print $ok ? "" : "not ", "ok 63\n";
 
 $ok=  ! eval { AllowPriv("",1) }  &&  $@ eq "";
 $Debug && $@ && warn "\$@=$@\n";
-print $ok ? "" : "not ", "ok 62\n";
+print $ok ? "" : "not ", "ok 64\n";
 
-$test= 62;
+$test= 64;
 foreach $func ( @{$Win32API::Registry::EXPORT_TAGS{Func}} ) {
     $ok=  ! eval("$func()")  &&  $@ =~ /::_?${func}A?\(/;
     $Debug && !$ok && warn "$func: $@\n";

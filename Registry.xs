@@ -24,7 +24,7 @@ extern "C" {
     {
       va_list alist;
       static char *env= NULL;
-      DWORD dwErr= GetLastError();
+      DWORD iErr= GetLastError();
 	if(  NULL == env  ) {
 	    if(  NULL == ( env= getenv("DEBUG_WIN32API_REGISTRY") )  )
 		env= "";
@@ -34,7 +34,7 @@ extern "C" {
 	va_start( alist, fmt );
 	vfprintf( stderr, fmt, alist );
 	va_end( alist );
-	SetLastError( dwErr );
+	SetLastError( iErr );
     }
 #endif /* DEBUGGING */
 
@@ -397,159 +397,19 @@ not_there:
 
 
 static LONG
-ErrorRet( DWORD dwErr )
+ErrorRet( DWORD iErr )
 {
-    if(  ERROR_SUCCESS == dwErr  )
+    if(  ERROR_SUCCESS == iErr  )
 	return( TRUE );
-    SetLastError( dwErr );
-    /* if(  ERROR_INSUFFICIENT_BUFFER == dwErr  )
+    SetLastError( iErr );
+    /* if(  ERROR_INSUFFICIENT_BUFFER == iErr  )
 	return( TRUE );
     */
     return FALSE;
 }
 
 
-/* Buffer arguments are usually followed by an argument specifying their size.
- * The size can be measured in bytes ("cbSize") or in characters ("cwSize")
- * [the latter only being different for WCHAR buffers].
- * The size sometimes does and sometimes doesn't include the trailing '\0'
- * (or L'\0'), so we always add or substract 1 in the appropriate places so
- * we don't care about this detail.
- * A call may  1) request a pointer to the buffer size which means that the
- * buffer size will be overwritten with the size of the data written;
- * 2) have an extra argument which is a pointer to the place to write the
- * size of the written data;  or  3) provide the size of the written data
- * in the functions return value.
- * The user can pass in an empty list reference, `[]', to indicate NULL for
- * the pointer to the buffer which means that they don't want that data.
- * The user can pass in `[]' or `0' to indicate that they don't care about
- * the buffer size [we aren't programming in C here, after all] and just make
- * sure they get the data.
- *
- * Before calling the actual C function, you must make sure the Perl variable
- * actually has a big enough buffer allocated, and, if the user didn't want
- * to specify a buffer size, set the buffer size to be correct.
- *
- * Once the actual C function returns, you must set the Perl variable to know
- * the size of the written data.
- *
- * If the buffer was too small (ERROR_MORE_DATA) and the data size is handy,
- * then just grow the buffer and repeat the call.
- *
- * The following macros do most of these items:
- */
-
-
-/* Is an argument `[]', meaning we should pass `NULL'? */
-#define null_arg(a)	(  SvROK(a)  &&  SVt_PVAV == SvTYPE(SvRV(a))	\
-			   &&  -1 == av_len((AV*)SvRV(a))  )
-
-/* Minimum buffer size to use on first call: */
-#define MIN_GROW_SIZE	8
-
-/* Used in Debug() messages to show which macro call is involved: */
-#define string(arg) #arg
-
-/* Slightly simplify using SvGROW() for byte-sized buffers: */
-#define bSvGROW(sv,n)	(void *) SvGROW( sv, (n)+1 )
-
-/* Simplify using SvGROW() for WCHAR-sized buffers: */
-#define wSvGROW(sv,n)	(WCHAR *) SvGROW( sv, ((n)+1)*sizeof(WCHAR) )
-
-/* Grow a buffer that takes a pointer to its size in bytes: */
-#define	grow_buf_pcb( sBuf,svBuf, pcbSize )	do {			\
-	Debug(( "grow_buf_pcb( %s,[%s, %s ); 0x%lX==0x%lX %ld\n",	\
-	  string(sBuf), strchr(string(svBuf),'('), string(pcbSize),	\
-	  sBuf, SvPVX(svBuf), pcbSize ? *pcbSize : -10 ));		\
-	if(  ! null_arg(svBuf)  ) {					\
-	    if(  NULL == pcbSize  )					\
-		*( pcbSize= (DWORD *) _alloca( sizeof(DWORD) ) )= 0;	\
-	    if(  ! SvOK(svBuf)  )    sv_setpvn(svBuf,"",0);		\
-	    sBuf= (void *) SvPV_force( svBuf, na );			\
-	    Debug(( "`%s' 0x%lX==0x%lX %ld of %ld\n", sBuf,		\
-	      sBuf, SvPVX(svBuf), SvCUR(svBuf), SvLEN(svBuf) ));	\
-	    if(  0 == *pcbSize  )					\
-		*pcbSize= MIN_GROW_SIZE;				\
-	    sBuf= bSvGROW( svBuf, *pcbSize );				\
-	    *pcbSize= SvLEN(svBuf) - 1;					\
-	    Debug(( "New sBuf=0x%lX, new *pcbSize=%ld\n",		\
-		    sBuf, *pcbSize ));					\
-	}								\
-    } while( FALSE )
-
-/* Grow a buffer that takes a pointer to its size in WCHARs: */
-#define	grow_buf_pcw( sBuf,svBuf, pcwSize )	do {			\
-	Debug(( "grow_buf_pcw( %s,[%s, %s ); 0x%lX==0x%lX %ld\n",	\
-	  string(sBuf), strchr(string(svBuf),'('), string(pcwSize),	\
-	  sBuf, SvPVX(svBuf), pcwSize ? *pcwSize : -10 ));		\
-	if(  ! null_arg(svBuf)  ) {					\
-	    if(  NULL == pcwSize  )					\
-		*( pcwSize= (DWORD *) _alloca( sizeof(DWORD) ) )= 0;	\
-	    if(  ! SvOK(svBuf)  )    sv_setpvn(svBuf,"",0);		\
-	    sBuf= (WCHAR *) SvPV_force( svBuf, na );			\
-	    Debug(( "`%ls' 0x%lX==0x%lX %ld of %ld\n", sBuf,		\
-	      sBuf, SvPVX(svBuf), SvCUR(svBuf), SvLEN(svBuf) ));	\
-	    if(  0 == *pcwSize  )					\
-		*pcwSize= MIN_GROW_SIZE;				\
-	    sBuf= wSvGROW( svBuf, *pcwSize );				\
-	    *pcwSize= SvLEN(svBuf)/sizeof(WCHAR) - 1;			\
-	    Debug(( "New sBuf=0x%lX, new *pcwSize=%ld\n",		\
-		    sBuf, *pcwSize ));					\
-	}								\
-    } while( FALSE )
-
-/* Grow a buffer to a fixed data type: */
-#define	grow_buf_typ( pBuf,svBuf, Type )	do {			\
-	Debug(( "grow_buf_typ( %s,[%s, %s ); 0x%lX==0x%lX %ld\n",	\
-	  string(pBuf), strchr(string(svBuf),'('), string(Type),	\
-	  pBuf, SvPVX(svBuf), sizeof(Type) ));				\
-	if(  ! null_arg(svBuf)  ) {					\
-	    if(  ! SvOK(svBuf)  )    sv_setpvn(svBuf,"",0);		\
-	    (void) SvPV_force( svBuf, na );				\
-	    pBuf= (Type *) SvGROW( svBuf, sizeof(Type) );		\
-	    Debug(( "0x%lX==0x%lX %ld of %ld\n",			\
-	      pBuf, SvPVX(svBuf), SvCUR(svBuf), SvLEN(svBuf) ));	\
-	}								\
-    } while( FALSE )
-
-/* Set data size for a buffer that takes a pointer to its size in bytes: */
-#define	trunc_buf_pcb( sBuf,svBuf, pcbSize )	do {			\
-	Debug(( "trunc_buf_pcb( %s,[%s, %s ); 0x%lX==0x%lX, %ld\n",	\
-	  string(sBuf), strchr(string(svBuf),'('), string(pcbSize),	\
-	  sBuf, SvPVX(svBuf), pcbSize ? *pcbSize : -10 ));		\
-	if(  RETVAL  &&  NULL != sBuf  ) {				\
-	    /*SvPOK_only( svBuf );*/					\
-	    SvCUR_set( svBuf, *pcbSize );				\
-	    /*sv_setpvn( svBuf, (char *)sBuf, *pcbSize );*/		\
-	    Debug(( "`%s' 0x%lX==0x%lX %ld of %ld\n", sBuf,		\
-	      sBuf, SvPVX(svBuf), SvCUR(svBuf), SvLEN(svBuf) ));	\
-	}								\
-    } while( FALSE )
-
-/* Set data size for a buffer that takes a pointer to its size in WCHARs: */
-#define	trunc_buf_pcw( sBuf,svBuf, pcwSize )	do {			\
-	Debug(( "trunc_buf_pcw( %s,[%s, %s ); 0x%lX==0x%lX, %ld\n",	\
-	  string(sBuf), strchr(string(svBuf),'('), string(pcwSize),	\
-	  sBuf, SvPVX(svBuf), pcwSize ? *pcwSize : -10 ));		\
-	if(  RETVAL  &&  NULL != sBuf  ) {				\
-	    SvCUR_set( svBuf, (*pcwSize)*sizeof(WCHAR) );		\
-	    Debug(( "`%ls' 0x%lX==0x%lX %ld of %ld\n", sBuf,		\
-	      sBuf, SvPVX(svBuf), SvCUR(svBuf), SvLEN(svBuf) ));	\
-	}								\
-    } while( FALSE )
-
-/* Set data size for a buffer to a fixed data type: */
-#define	trunc_buf_typ( pBuf,svBuf, Type )	do {			\
-	Debug(( "trunc_buf_typ( %s,[%s, %s ); 0x%lX==0x%lX, %ld\n",	\
-	  string(pBuf), strchr(string(svBuf),'('), string(Type),	\
-	  pBuf, SvPVX(svBuf), sizeof(Type) ));				\
-	if(  RETVAL  &&  NULL != pBuf  ) {				\
-	    SvCUR_set( svBuf, sizeof(Type) );				\
-	    Debug(( "0x%lX==0x%lX %ld of %ld\n",			\
-	      pBuf, SvPVX(svBuf), SvCUR(svBuf), SvLEN(svBuf) ));	\
-	}								\
-    } while( FALSE )
-
+#include "buffers.h"
 
 
 MODULE = Win32API::Registry		PACKAGE = Win32API::Registry		
@@ -558,62 +418,72 @@ PROTOTYPES: DISABLE
 
 
 long
-constant( name, arg )
-	char *	name
-	int	arg
+constant( sName, iArg )
+	char *	sName
+	int	iArg
+
+
+bool
+AllowPriv( sPrivName, bEnable )
+	char *	sPrivName
+	BOOL	bEnable
+    PREINIT:
+    	HANDLE			hToken= INVALID_HANDLE_VALUE;
+	TOKEN_PRIVILEGES	tokPrivNew;
     CODE:
-	RETVAL= constant( name, arg );
+	tokPrivNew.PrivilegeCount= 1;
+	if(  bEnable  ) {
+	    tokPrivNew.Privileges[0].Attributes= SE_PRIVILEGE_ENABLED;
+	} else {
+	    tokPrivNew.Privileges[0].Attributes= 0;
+	}
+	RETVAL= FALSE;
+	if(  OpenProcessToken( GetCurrentProcess(),
+	       TOKEN_ADJUST_PRIVILEGES, &hToken )
+	 &&  LookupPrivilegeValue( NULL, sPrivName,
+	       &tokPrivNew.Privileges[0].Luid )
+	 &&  AdjustTokenPrivileges( hToken, FALSE, &tokPrivNew,
+	       NULL, NULL, NULL )  ) {
+	    RETVAL= TRUE;
+	    CloseHandle( hToken );
+	} else if(  INVALID_HANDLE_VALUE != hToken  ) {
+	  DWORD iErr= GetLastError();
+	    CloseHandle( hToken );
+	    SetLastError( iErr );
+	}
     OUTPUT:
 	RETVAL
 
 
 BOOL
-AbortSystemShutdownA( sMachine )
-	char *	sMachine
-    CODE:
-	RETVAL= AbortSystemShutdownA( sMachine );
-    OUTPUT:
-	RETVAL
+AbortSystemShutdownA( sComputerName )
+	char *	sComputerName
 
 
 BOOL
-AbortSystemShutdownW( sMachine )
-	WCHAR *	sMachine
-    CODE:
-	RETVAL= AbortSystemShutdownW( sMachine );
-    OUTPUT:
-	RETVAL
+AbortSystemShutdownW( sComputerName )
+	WCHAR *	sComputerName
 
 
 BOOL
-InitiateSystemShutdownA( sMachine, sMessage, iTimeoutSecs, bForce, bReboot )
-	char *	sMachine
+InitiateSystemShutdownA( sComputer, sMessage, iTimeoutSecs, bForce, bReboot )
+	char *	sComputer
 	char *	sMessage
 	DWORD	iTimeoutSecs
 	BOOL	bForce
 	BOOL	bReboot
-    CODE:
-	RETVAL= InitiateSystemShutdownA(
-		  sMachine, sMessage, iTimeoutSecs, bForce, bReboot );
-    OUTPUT:
-	RETVAL
 
 
 BOOL
-InitiateSystemShutdownW( sMachine, sMessage, iTimeoutSecs, bForce, bReboot )
-	WCHAR *	sMachine
+InitiateSystemShutdownW( sComputer, sMessage, iTimeoutSecs, bForce, bReboot )
+	WCHAR *	sComputer
 	WCHAR *	sMessage
 	DWORD	iTimeoutSecs
 	BOOL	bForce
 	BOOL	bReboot
-    CODE:
-	RETVAL= InitiateSystemShutdownW(
-		  sMachine, sMessage, iTimeoutSecs, bForce, bReboot );
-    OUTPUT:
-	RETVAL
 
 
-LONG
+bool
 RegCloseKey( hKey )
 	HKEY	hKey
     CODE:
@@ -622,31 +492,31 @@ RegCloseKey( hKey )
 	RETVAL
 
 
-LONG
-RegConnectRegistryA( sMachine, hKey, phKey )
-	char *	sMachine
+bool
+RegConnectRegistryA( sComputer, hKey, phKey )
+	char *	sComputer
 	HKEY	hKey
 	HKEY *	phKey
     CODE:
-	RETVAL= ErrorRet(  RegConnectRegistryA( sMachine, hKey, phKey )  );
+	RETVAL= ErrorRet(  RegConnectRegistryA( sComputer, hKey, phKey )  );
     OUTPUT:
 	RETVAL
 	phKey
 
 
-LONG
-RegConnectRegistryW( sMachine, hKey, phKey )
-	WCHAR *	sMachine
+bool
+RegConnectRegistryW( sComputer, hKey, phKey )
+	WCHAR *	sComputer
 	HKEY	hKey
 	HKEY *	phKey
     CODE:
-	RETVAL= ErrorRet(  RegConnectRegistryW( sMachine, hKey, phKey )  );
+	RETVAL= ErrorRet(  RegConnectRegistryW( sComputer, hKey, phKey )  );
     OUTPUT:
 	RETVAL
 	phKey
 
 
-LONG
+bool
 RegCreateKeyA( hKey, sSubKey, phKey )
 	HKEY	hKey
 	char *	sSubKey
@@ -658,7 +528,7 @@ RegCreateKeyA( hKey, sSubKey, phKey )
 	phKey
 
 
-LONG
+bool
 RegCreateKeyW( hKey, sSubKey, phKey )
 	HKEY	hKey
 	WCHAR *	sSubKey
@@ -670,47 +540,47 @@ RegCreateKeyW( hKey, sSubKey, phKey )
 	phKey
 
 
-LONG
-RegCreateKeyExA(hKey,sSubKey,iZero,sClass,iOpts,samWant,pSecAttr,phKey,piDisp)
+bool
+RegCreateKeyExA(hKey,sSubKey,iZero,sClass,iOpts,iAccess,pSecAttr,phKey,piDisp)
 	HKEY	hKey
 	char *	sSubKey
 	DWORD	iZero
 	char *	sClass
 	DWORD	iOpts
-	REGSAM	samWant
+	REGSAM	iAccess
 	void *	pSecAttr
 	HKEY *	phKey
 	DWORD *	piDisp
     CODE:
 	RETVAL= ErrorRet(  RegCreateKeyExA( hKey, sSubKey, iZero,
-	  sClass, iOpts, samWant, pSecAttr, phKey, piDisp )  );
+	  sClass, iOpts, iAccess, pSecAttr, phKey, piDisp )  );
     OUTPUT:
 	RETVAL
 	phKey
 	piDisp
 
 
-LONG
-RegCreateKeyExW(hKey,sSubKey,iZero,sClass,iOpts,samWant,pSecAttr,phKey,piDisp)
+bool
+RegCreateKeyExW(hKey,sSubKey,iZero,sClass,iOpts,iAccess,pSecAttr,phKey,piDisp)
 	HKEY	hKey
 	WCHAR *	sSubKey
 	DWORD	iZero
 	WCHAR *	sClass
 	DWORD	iOpts
-	REGSAM	samWant
+	REGSAM	iAccess
 	void *	pSecAttr
 	HKEY *	phKey
 	DWORD *	piDisp
     CODE:
 	RETVAL= ErrorRet(  RegCreateKeyExW( hKey, sSubKey, iZero,
-	  sClass, iOpts, samWant, pSecAttr, phKey, piDisp )  );
+	  sClass, iOpts, iAccess, pSecAttr, phKey, piDisp )  );
     OUTPUT:
 	RETVAL
 	phKey
 	piDisp
 
 
-LONG
+bool
 RegDeleteKeyA( hKey, sSubKey )
 	HKEY	hKey
 	char *	sSubKey
@@ -720,7 +590,7 @@ RegDeleteKeyA( hKey, sSubKey )
 	RETVAL
 
 
-LONG
+bool
 RegDeleteKeyW( hKey, sSubKey )
 	HKEY	hKey
 	WCHAR *	sSubKey
@@ -730,7 +600,7 @@ RegDeleteKeyW( hKey, sSubKey )
 	RETVAL
 
 
-LONG
+bool
 RegDeleteValueA( hKey, sValueName )
 	HKEY	hKey
 	char *	sValueName
@@ -740,189 +610,217 @@ RegDeleteValueA( hKey, sValueName )
 	RETVAL
 
 
-LONG
+bool
 RegDeleteValueW( hKey, sValueName )
 	HKEY	hKey
 	WCHAR *	sValueName
 
 
-LONG
-_RegEnumKeyA( hKey, iIndex, sName, cbNameSize )
+bool
+_RegEnumKeyA( hKey, iIndex, sName, lNameSize )
 	HKEY	hKey
 	DWORD	iIndex
 	char *	sName
-	DWORD	cbNameSize
+	DWORD	lNameSize
+    PREINIT:
+    	DWORD		iErr;
     CODE:
-	RETVAL= ErrorRet(  RegEnumKeyA( hKey, iIndex, sName, cbNameSize )  );
+	grow_buf_l( sName,ST(2), lNameSize,ST(3) );
+	iErr= RegEnumKeyA( hKey, iIndex, sName, lNameSize );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(3))  ) {
+	    grow_buf_l( sName,ST(2), lNameSize,ST(3) );
+	    iErr= RegEnumKeyA( hKey, iIndex, sName, lNameSize );
+	}
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_l( RETVAL, sName,ST(2), lNameSize );
     OUTPUT:
 	RETVAL
 	sName
-	cbNameSize
+	lNameSize
 
 
-LONG
-_RegEnumKeyW( hKey, iIndex, sName, cwNameSize )
+bool
+_RegEnumKeyW( hKey, iIndex, sName, lwNameSize )
 	HKEY	hKey
 	DWORD	iIndex
 	WCHAR *	sName
-	DWORD	cwNameSize
+	DWORD	lwNameSize
+    PREINIT:
+    	DWORD		iErr;
     CODE:
-	RETVAL= ErrorRet(  RegEnumKeyW( hKey, iIndex, sName, cwNameSize )  );
+	grow_buf_lw( sName,ST(2), lwNameSize,ST(3) );
+	iErr= RegEnumKeyW( hKey, iIndex, sName, lwNameSize );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(3))  ) {
+	    grow_buf_lw( sName,ST(2), lwNameSize,ST(3) );
+	    iErr= RegEnumKeyW( hKey, iIndex, sName, lwNameSize );
+	}
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_lw( RETVAL, sName,ST(2), lwNameSize );
     OUTPUT:
 	RETVAL
 	sName
-	cwNameSize
+	lwNameSize
 
 
-LONG
-_RegEnumKeyExA(hKey,iIndex,sName,pcbName,pNull,sClass,pcbClass,pftLastWrite)
+bool
+_RegEnumKeyExA(hKey,iIndex,sName,plName,pNull,sClass,plClass,pftLastWrite)
 	HKEY		hKey
 	DWORD		iIndex
 	char *		sName
-	DWORD *		pcbName
+	DWORD *		plName
 	DWORD *		pNull
 	char *		sClass
-	DWORD *		pcbClass
+	DWORD *		plClass
 	FILETIME *	pftLastWrite
+    PREINIT:
+    	DWORD		iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( sName,ST(2), pcbName );
-	    grow_buf_pcb( sClass,ST(5), pcbClass );
-	    grow_buf_typ( pftLastWrite,ST(7), FILETIME );
-	    dwErr= RegEnumKeyExA( hKey, iIndex, sName, pcbName,
-	      pNull, sClass, pcbClass, pftLastWrite );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( sName,ST(2), pcbName );
-		grow_buf_pcb( sClass,ST(5), pcbClass );
-		dwErr= RegEnumKeyExA( hKey, iIndex, sName, pcbName,
-		  pNull, sClass, pcbClass, pftLastWrite );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( sName,ST(2), plName,ST(3) );
+	grow_buf_pl( sClass,ST(5), plClass,ST(6) );
+	iErr= RegEnumKeyExA( hKey, iIndex, sName, plName,
+	  pNull, sClass, plClass, pftLastWrite );
+	if(  ERROR_MORE_DATA == iErr
+	 &&  ( autosize(ST(3)) || autosize(ST(6)) )  ) {
+	    grow_buf_pl( sName,ST(2), plName,ST(3) );
+	    grow_buf_pl( sClass,ST(5), plClass,ST(6) );
+	    iErr= RegEnumKeyExA( hKey, iIndex, sName, plName,
+	      pNull, sClass, plClass, pftLastWrite );
 	}
-	trunc_buf_pcb( sName,ST(2), pcbName );
-	trunc_buf_pcb( sClass,ST(5), pcbClass );
-	trunc_buf_typ( pftLastWrite,ST(7), FILETIME );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, sName,ST(2), plName );
+	trunc_buf_pl( RETVAL, sClass,ST(5), plClass );
     OUTPUT:
 	RETVAL
-	pcbName
+	plName
 	pNull
-	pcbClass
+	plClass
 	pftLastWrite
 
 
-LONG
-_RegEnumKeyExW(hKey,iIndex,sName,pcwName,pNull,sClass,pcwClass,pftLastWrite)
+bool
+_RegEnumKeyExW(hKey,iIndex,sName,plwName,pNull,sClass,plwClass,pftLastWrite)
 	HKEY		hKey
 	DWORD		iIndex
 	WCHAR *		sName
-	DWORD *		pcwName
+	DWORD *		plwName
 	DWORD *		pNull
 	WCHAR *		sClass
-	DWORD *		pcwClass
+	DWORD *		plwClass
 	FILETIME *	pftLastWrite
+    PREINIT:
+	DWORD		iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcw( sName,ST(2), pcwName );
-	    grow_buf_pcw( sClass,ST(5), pcwClass );
-	    grow_buf_typ( pftLastWrite,ST(7), FILETIME );
-	    dwErr= RegEnumKeyExW( hKey, iIndex, sName, pcwName,
-	      pNull, sClass, pcwClass, pftLastWrite );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcw( sName,ST(2), pcwName );
-		grow_buf_pcw( sClass,ST(5), pcwClass );
-		dwErr= RegEnumKeyExW( hKey, iIndex, sName, pcwName,
-		  pNull, sClass, pcwClass, pftLastWrite );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_plw( sName,ST(2), plwName,ST(3) );
+	grow_buf_plw( sClass,ST(5), plwClass,ST(6) );
+	grow_buf_typ( pftLastWrite,ST(7), FILETIME );
+	iErr= RegEnumKeyExW( hKey, iIndex, sName, plwName,
+	  pNull, sClass, plwClass, pftLastWrite );
+	if(  ERROR_MORE_DATA == iErr
+	 &&  ( autosize(ST(3)) || autosize(ST(6)) )  ) {
+	    grow_buf_plw( sName,ST(2), plwName,ST(3) );
+	    grow_buf_plw( sClass,ST(5), plwClass,ST(6) );
+	    iErr= RegEnumKeyExW( hKey, iIndex, sName, plwName,
+	      pNull, sClass, plwClass, pftLastWrite );
 	}
-	trunc_buf_pcw( sName,ST(2), pcwName );
-	trunc_buf_pcw( sClass,ST(5), pcwClass );
-	trunc_buf_typ( pftLastWrite,ST(7), FILETIME );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_plw( RETVAL, sName,ST(2), plwName );
+	trunc_buf_plw( RETVAL, sClass,ST(5), plwClass );
+	trunc_buf_typ( RETVAL, pftLastWrite,ST(7), FILETIME );
     OUTPUT:
 	RETVAL
-	pcwName
+	plwName
 	pNull
-	pcwClass
+	plwClass
 	pftLastWrite
 
 
-LONG
-_RegEnumValueA(hKey,iIndex,sValName,pcbValName,pNull,piType,pValData,pcbValData)
+bool
+_RegEnumValueA(hKey,iIndex,sValName,plValName,pNull,piType,pValData,plValData)
 	HKEY	hKey
 	DWORD	iIndex
 	char *	sValName
-	DWORD *	pcbValName
+	DWORD *	plValName
 	DWORD *	pNull
 	DWORD *	piType
 	BYTE *	pValData
-	DWORD *	pcbValData
+	DWORD *	plValData
+    PREINIT:
+	DWORD	iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( sValName,ST(2), pcbValName );
-	    grow_buf_pcb( pValData,ST(6), pcbValData );
-	    if(  NULL == piType  &&  NULL != pValData  )
-		piType= (DWORD *) _alloca( sizeof(DWORD) );
-	    dwErr= RegEnumValueA( hKey, iIndex, sValName,
-	      pcbValName, pNull, piType, pValData, pcbValData );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( sValName,ST(2), pcbValName );
-		grow_buf_pcb( pValData,ST(6), pcbValData );
-		dwErr= RegEnumValueA( hKey, iIndex, sValName,
-		  pcbValName, pNull, piType, pValData, pcbValData );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( sValName,ST(2), plValName,ST(3) );
+	grow_buf_pl( pValData,ST(6), plValData,ST(7) );
+	if(  NULL == piType  &&  NULL != pValData  &&  null_arg(ST(7))  )
+	    piType= (DWORD *) _alloca( sizeof(DWORD) );
+	iErr= RegEnumValueA( hKey, iIndex, sValName,
+	  plValName, pNull, piType, pValData, plValData );
+	if(  ERROR_MORE_DATA == iErr
+	 &&  ( autosize(ST(3)) || autosize(ST(7)) )  ) {
+	    grow_buf_pl( sValName,ST(2), plValName,ST(3) );
+	    grow_buf_pl( pValData,ST(6), plValData,ST(7) );
+	    iErr= RegEnumValueA( hKey, iIndex, sValName,
+	      plValName, pNull, piType, pValData, plValData );
 	}
-	trunc_buf_pcb( sValName,ST(2), pcbValName );
-	trunc_buf_pcb( pValData,ST(6), pcbValData );
-	/* Strip trailing '\0' from string value data: */
-	if(  RETVAL  &&  NULL != pValData  &&  NULL != pcbValData
-	 &&  ( REG_SZ == *piType || REG_EXPAND_SZ == *piType )  )
-	    SvCUR_set( ST(6), *pcbValData-1 );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, sValName,ST(2), plValName );
+	trunc_buf_pl( RETVAL, pValData,ST(6), plValData );
+	/* Traim trailing '\0' from REG*_SZ values if plValData was C<[]>: */
+	if(  RETVAL  &&  NULL != pValData  &&  NULL != piType
+	 &&  ( REG_SZ == *piType || REG_EXPAND_SZ == *piType )
+	 &&  null_arg(ST(7))  &&  '\0' == pValData[*plValData-1]  )
+	    SvCUR_set( ST(6), --*plValData );
     OUTPUT:
 	RETVAL
 	sValName
-	pcbValName
+	plValName
 	pNull
 	piType
 	pValData
-	pcbValData
+	plValData
 
 
-LONG
-_RegEnumValueW(hKey,iIndex,sValName,pcwValName,pNull,piType,pValData,pcbValData)
+bool
+_RegEnumValueW(hKey,iIndex,sValName,plwValName,pNull,piType,pValData,plValData)
 	HKEY	hKey
 	DWORD	iIndex
 	WCHAR *	sValName
-	DWORD *	pcwValName
+	DWORD *	plwValName
 	DWORD *	pNull
 	DWORD *	piType
 	BYTE *	pValData
-	DWORD *	pcbValData
+	DWORD *	plValData
+    PREINIT:
+	DWORD	iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcw( sValName,ST(2), pcwValName );
-	    grow_buf_pcb( pValData,ST(5), pcbValData );
-	    dwErr= RegEnumValueW( hKey, iIndex, sValName, pcwValName,
-	      pNull, piType, pValData, pcbValData );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcw( sValName,ST(2), pcwValName );
-		grow_buf_pcb( pValData,ST(5), pcbValData );
-		dwErr= RegEnumValueW( hKey, iIndex, sValName, pcwValName,
-		  pNull, piType, pValData, pcbValData );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_plw( sValName,ST(2), plwValName,ST(3) );
+	grow_buf_pl( pValData,ST(6), plValData,ST(7) );
+	if(  NULL == piType  &&  NULL != pValData  &&  null_arg(ST(7))  )
+	    piType= (DWORD *) _alloca( sizeof(DWORD) );
+	iErr= RegEnumValueW( hKey, iIndex, sValName, plwValName,
+	  pNull, piType, pValData, plValData );
+	if(  ERROR_MORE_DATA == iErr
+	 &&  ( autosize(ST(3)) || autosize(ST(7)) )  ) {
+	    grow_buf_plw( sValName,ST(2), plwValName,ST(3) );
+	    grow_buf_pl( pValData,ST(6), plValData,ST(7) );
+	    iErr= RegEnumValueW( hKey, iIndex, sValName, plwValName,
+	      pNull, piType, pValData, plValData );
 	}
-	trunc_buf_pcw( sValName,ST(2), pcwValName );
-	trunc_buf_pcb( pValData,ST(5), pcbValData );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_plw( RETVAL, sValName,ST(2), plwValName );
+	trunc_buf_pl( RETVAL, pValData,ST(6), plValData );
+	/* Traim trailing L'\0' from REG*_SZ values if plValData was C<[]>: */
+	if(  RETVAL  &&  NULL != pValData  &&  NULL != piType
+	 &&  ( REG_SZ == *piType || REG_EXPAND_SZ == *piType )
+	 &&  null_arg(ST(7))  &&  L'\0' == pValData[*plValData-1]  )
+	    SvCUR_set( ST(6), sizeof(WCHAR)*(--*plValData) );
     OUTPUT:
 	RETVAL
-	pcwValName
+	plwValName
 	pNull
 	piType
-	pcbValData
+	plValData
 
 
-LONG
+bool
 RegFlushKey( hKey )
 	HKEY	hKey
     CODE:
@@ -931,30 +829,29 @@ RegFlushKey( hKey )
 	RETVAL
 
 
-LONG
-_RegGetKeySecurity( hKey, iSecInfo, pSecDesc, pcbSecDesc )
+bool
+_RegGetKeySecurity( hKey, iSecInfo, pSecDesc, plSecDesc )
 	HKEY			hKey
 	SECURITY_INFORMATION	iSecInfo
 	SECURITY_DESCRIPTOR *	pSecDesc
-	DWORD *			pcbSecDesc
+	DWORD *			plSecDesc
+    PREINIT:
+	DWORD			iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( pSecDesc,ST(2), pcbSecDesc );
-	    dwErr= RegGetKeySecurity( hKey, iSecInfo, pSecDesc, pcbSecDesc );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( pSecDesc,ST(2), pcbSecDesc );
-		dwErr= RegGetKeySecurity(
-		  hKey, iSecInfo, pSecDesc, pcbSecDesc );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( pSecDesc,ST(2), plSecDesc,ST(3) );
+	iErr= RegGetKeySecurity( hKey, iSecInfo, pSecDesc, plSecDesc );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(3))  ) {
+	    grow_buf_pl( pSecDesc,ST(2), plSecDesc,ST(3) );
+	    iErr= RegGetKeySecurity( hKey, iSecInfo, pSecDesc, plSecDesc );
 	}
-	trunc_buf_pcb( pSecDesc,ST(2), pcbSecDesc );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, pSecDesc,ST(2), plSecDesc );
     OUTPUT:
 	RETVAL
-	pcbSecDesc
+	plSecDesc
 
 
-LONG
+bool
 RegLoadKeyA( hKey, sSubKey, sFileName )
 	HKEY	hKey
 	char *	sSubKey
@@ -965,7 +862,7 @@ RegLoadKeyA( hKey, sSubKey, sFileName )
 	RETVAL
 
 
-LONG
+bool
 RegLoadKeyW( hKey, sSubKey, sFileName )
 	HKEY	hKey
 	WCHAR *	sSubKey
@@ -976,39 +873,7 @@ RegLoadKeyW( hKey, sSubKey, sFileName )
 	RETVAL
 
 
-BOOL
-AllowPriv( sPrivName, bEnable )
-	char *	sPrivName
-	BOOL	bEnable
-    CODE:
-    	{ HANDLE hToken= INVALID_HANDLE_VALUE;
-	  TOKEN_PRIVILEGES tokPrivNew;
-	    tokPrivNew.PrivilegeCount= 1;
-	    if(  bEnable  ) {
-		tokPrivNew.Privileges[0].Attributes= SE_PRIVILEGE_ENABLED;
-	    } else {
-		tokPrivNew.Privileges[0].Attributes= 0;
-	    }
-	    RETVAL= FALSE;
-	    if(  OpenProcessToken( GetCurrentProcess(),
-		   TOKEN_ADJUST_PRIVILEGES, &hToken )
-	     &&  LookupPrivilegeValue( NULL, sPrivName,
-		   &tokPrivNew.Privileges[0].Luid )
-	     &&  AdjustTokenPrivileges( hToken, FALSE, &tokPrivNew,
-		   NULL, NULL, NULL )  ) {
-		RETVAL= TRUE;
-		CloseHandle( hToken );
-	    } else if(  INVALID_HANDLE_VALUE != hToken  ) {
-	      DWORD dwErr= GetLastError();
-		CloseHandle( hToken );
-		SetLastError( dwErr );
-	    }
-	}
-    OUTPUT:
-	RETVAL
-
-
-LONG
+bool
 RegNotifyChangeKeyValue( hKey, bWatchSubtree, iNotifyFilter, hEvent, bAsync )
 	HKEY	hKey
 	BOOL	bWatchSubtree
@@ -1022,7 +887,7 @@ RegNotifyChangeKeyValue( hKey, bWatchSubtree, iNotifyFilter, hEvent, bAsync )
 	RETVAL
 
 
-LONG
+bool
 RegOpenKeyA( hKey, sSubKey, phKey )
 	HKEY	hKey
 	char *	sSubKey
@@ -1034,7 +899,7 @@ RegOpenKeyA( hKey, sSubKey, phKey )
 	phKey
 
 
-LONG
+bool
 RegOpenKeyW( hKey, sSubKey, phKey )
 	HKEY	hKey
 	WCHAR *	sSubKey
@@ -1046,285 +911,287 @@ RegOpenKeyW( hKey, sSubKey, phKey )
 	phKey
 
 
-LONG
-RegOpenKeyExA( hKey, sSubKey, iOptions, samWanted, phKey )
+bool
+RegOpenKeyExA( hKey, sSubKey, iOptions, iAccess, phKey )
 	HKEY	hKey
 	char *	sSubKey
 	DWORD	iOptions
-	REGSAM	samWanted
+	REGSAM	iAccess
 	HKEY *	phKey
     CODE:
 	RETVAL= ErrorRet(  RegOpenKeyExA(
-	  hKey, sSubKey, iOptions, samWanted, phKey )  );
+	  hKey, sSubKey, iOptions, iAccess, phKey )  );
     OUTPUT:
 	RETVAL
 	phKey
 
 
-LONG
-RegOpenKeyExW( hKey, sSubKey, iOptions, samWanted, phKey )
+bool
+RegOpenKeyExW( hKey, sSubKey, iOptions, iAccess, phKey )
 	HKEY	hKey
 	WCHAR *	sSubKey
 	DWORD	iOptions
-	REGSAM	samWanted
+	REGSAM	iAccess
 	HKEY *	phKey
     CODE:
 	RETVAL= ErrorRet(  RegOpenKeyExW(
-	  hKey, sSubKey, iOptions, samWanted, phKey )  );
+	  hKey, sSubKey, iOptions, iAccess, phKey )  );
     OUTPUT:
 	RETVAL
 	phKey
 
 
-LONG
-_RegQueryInfoKeyA( hKey, sClass, pcbClass, pNull, piSubKeys, pcbSubKey, pcbSubClass, piValues, pcbValName, pcbValData, pcbSecDesc, pftTime )
+bool
+_RegQueryInfoKeyA( hKey, sClass, plClass, pNull, pcSubKeys, plSubKey, plSubClass, pcValues, plValName, plValData, plSecDesc, pftTime )
 	HKEY		hKey
 	char *		sClass
-	DWORD *		pcbClass
+	DWORD *		plClass
 	DWORD *		pNull
-	DWORD *		piSubKeys
-	DWORD *		pcbSubKey
-	DWORD *		pcbSubClass
-	DWORD *		piValues
-	DWORD *		pcbValName
-	DWORD *		pcbValData
-	DWORD *		pcbSecDesc
+	DWORD *		pcSubKeys
+	DWORD *		plSubKey
+	DWORD *		plSubClass
+	DWORD *		pcValues
+	DWORD *		plValName
+	DWORD *		plValData
+	DWORD *		plSecDesc
 	FILETIME *	pftTime
+    PREINIT:
+	DWORD		iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( sClass,ST(1), pcbClass );
-	    grow_buf_typ( pftTime,ST(11), FILETIME );
-	    dwErr= RegQueryInfoKeyA( hKey, sClass, pcbClass,
-	      pNull, piSubKeys, pcbSubKey, pcbSubClass, piValues,
-	      pcbValName, pcbValData, pcbSecDesc, pftTime );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( sClass,ST(1), pcbClass );
-		dwErr= RegQueryInfoKeyA( hKey, sClass, pcbClass,
-		  pNull, piSubKeys, pcbSubKey, pcbSubClass, piValues,
-		  pcbValName, pcbValData, pcbSecDesc, pftTime );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( sClass,ST(1), plClass,ST(2) );
+	iErr= RegQueryInfoKeyA( hKey, sClass, plClass,
+	  pNull, pcSubKeys, plSubKey, plSubClass, pcValues,
+	  plValName, plValData, plSecDesc, pftTime );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(2))  ) {
+	    grow_buf_pl( sClass,ST(1), plClass,ST(2) );
+	    iErr= RegQueryInfoKeyA( hKey, sClass, plClass,
+	      pNull, pcSubKeys, plSubKey, plSubClass, pcValues,
+	      plValName, plValData, plSecDesc, pftTime );
 	}
-	trunc_buf_pcb( sClass,ST(1), pcbClass );
-	trunc_buf_typ( pftTime,ST(11), FILETIME );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, sClass,ST(1), plClass );
     OUTPUT:
 	RETVAL
-	pcbClass
+	plClass
 	pNull
-	piSubKeys
-	pcbSubKey
-	pcbSubClass
-	piValues
-	pcbValName
-	pcbValData
-	pcbSecDesc
+	pcSubKeys
+	plSubKey
+	plSubClass
+	pcValues
+	plValName
+	plValData
+	plSecDesc
 	pftTime
 
 
-LONG
-_RegQueryInfoKeyW( hKey, sClass, pcwClass, pNull, piSubKeys, pcwSubKey, pcwSubClass, piValues, pcwValName, pcbValData, pcbSecDesc, pftTime )
+bool
+_RegQueryInfoKeyW( hKey, sClass, plwClass, pNull, pcSubKeys, plwSubKey, plwSubClass, pcValues, plwValName, plValData, plSecDesc, pftTime )
 	HKEY		hKey
 	WCHAR *		sClass
-	DWORD *		pcwClass
+	DWORD *		plwClass
 	DWORD *		pNull
-	DWORD *		piSubKeys
-	DWORD *		pcwSubKey
-	DWORD *		pcwSubClass
-	DWORD *		piValues
-	DWORD *		pcwValName
-	DWORD *		pcbValData
-	DWORD *		pcbSecDesc
+	DWORD *		pcSubKeys
+	DWORD *		plwSubKey
+	DWORD *		plwSubClass
+	DWORD *		pcValues
+	DWORD *		plwValName
+	DWORD *		plValData
+	DWORD *		plSecDesc
 	FILETIME *	pftTime
+    PREINIT:
+    	DWORD		iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcw( sClass,ST(1), pcwClass );
-	    grow_buf_typ( pftTime,ST(11), FILETIME );
-	    dwErr= RegQueryInfoKeyW( hKey, sClass, pcwClass,
-	      pNull, piSubKeys, pcwSubKey, pcwSubClass, piValues,
-	      pcwValName, pcbValData, pcbSecDesc, pftTime );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcw( sClass,ST(1), pcwClass );
-		dwErr= RegQueryInfoKeyW( hKey, sClass, pcwClass,
-		  pNull, piSubKeys, pcwSubKey, pcwSubClass, piValues,
-		  pcwValName, pcbValData, pcbSecDesc, pftTime );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_plw( sClass,ST(1), plwClass,ST(2) );
+	iErr= RegQueryInfoKeyW( hKey, sClass, plwClass,
+	  pNull, pcSubKeys, plwSubKey, plwSubClass, pcValues,
+	  plwValName, plValData, plSecDesc, pftTime );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(2))  ) {
+	    grow_buf_plw( sClass,ST(1), plwClass,ST(2) );
+	    iErr= RegQueryInfoKeyW( hKey, sClass, plwClass,
+	      pNull, pcSubKeys, plwSubKey, plwSubClass, pcValues,
+	      plwValName, plValData, plSecDesc, pftTime );
 	}
-	trunc_buf_pcw( sClass,ST(1), pcwClass );
-	trunc_buf_typ( pftTime,ST(11), FILETIME );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_plw( RETVAL, sClass,ST(1), plwClass );
     OUTPUT:
 	RETVAL
-	pcwClass
+	plwClass
 	pNull
-	piSubKeys
-	pcwSubKey
-	pcwSubClass
-	piValues
-	pcwValName
-	pcbValData
-	pcbSecDesc
+	pcSubKeys
+	plwSubKey
+	plwSubClass
+	pcValues
+	plwValName
+	plValData
+	plSecDesc
 	pftTime
 
 
-LONG
-_RegQueryMultipleValuesA( hKey, pValueEnts, iValueEnts, pBuffer, pcbBuffer )
+bool
+_RegQueryMultipleValuesA( hKey, pValueEnts, cValueEnts, pBuffer, plBuffer )
 	HKEY	hKey
 	void *	pValueEnts
-	DWORD	iValueEnts
+	DWORD	cValueEnts
 	char *	pBuffer
-	DWORD *	pcbBuffer
+	DWORD *	plBuffer
+    PREINIT:
+	DWORD	iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( pBuffer,ST(3), pcbBuffer );
-	    dwErr= RegQueryMultipleValuesA(
-	      hKey, pValueEnts, iValueEnts, pBuffer, pcbBuffer );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( pBuffer,ST(3), pcbBuffer );
-		dwErr= RegQueryMultipleValuesA(
-		  hKey, pValueEnts, iValueEnts, pBuffer, pcbBuffer );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( pBuffer,ST(3), plBuffer,ST(4) );
+	iErr= RegQueryMultipleValuesA(
+	  hKey, pValueEnts, cValueEnts, pBuffer, plBuffer );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(4))  ) {
+	    grow_buf_pl( pBuffer,ST(3), plBuffer,ST(4) );
+	    iErr= RegQueryMultipleValuesA(
+	      hKey, pValueEnts, cValueEnts, pBuffer, plBuffer );
 	}
-	trunc_buf_pcb( pBuffer,ST(3), pcbBuffer );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, pBuffer,ST(3), plBuffer );
     OUTPUT:
 	RETVAL
-	pcbBuffer
+	plBuffer
 
 
-LONG
-_RegQueryMultipleValuesW( hKey, pValueEnts, iValueEnts, pBuffer, pcbBuffer )
+bool
+_RegQueryMultipleValuesW( hKey, pValueEnts, cValueEnts, pBuffer, plBuffer )
 	HKEY	hKey
 	void *	pValueEnts
-	DWORD	iValueEnts
+	DWORD	cValueEnts
 	WCHAR *	pBuffer
-	DWORD *	pcbBuffer
+	DWORD *	plBuffer
+    PREINIT:
+    	DWORD	iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( pBuffer,ST(3), pcbBuffer );
-	    dwErr= RegQueryMultipleValuesW(
-	      hKey, pValueEnts, iValueEnts, pBuffer, pcbBuffer );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( pBuffer,ST(3), pcbBuffer );
-		dwErr= RegQueryMultipleValuesW(
-		  hKey, pValueEnts, iValueEnts, pBuffer, pcbBuffer );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( pBuffer,ST(3), plBuffer,ST(4) );
+	iErr= RegQueryMultipleValuesW(
+	  hKey, pValueEnts, cValueEnts, pBuffer, plBuffer );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(4))  ) {
+	    grow_buf_pl( pBuffer,ST(3), plBuffer,ST(4) );
+	    iErr= RegQueryMultipleValuesW(
+	      hKey, pValueEnts, cValueEnts, pBuffer, plBuffer );
 	}
-	trunc_buf_pcb( pBuffer,ST(3), pcbBuffer );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, pBuffer,ST(3), plBuffer );
     OUTPUT:
 	RETVAL
-	pcbBuffer
+	plBuffer
 
 
-LONG
-_RegQueryValueA( hKey, sSubKey, sValueData, pcbValueData )
+bool
+_RegQueryValueA( hKey, sSubKey, sValueData, plValueData )
 	HKEY	hKey
 	char *	sSubKey
 	char *	sValueData
-	LONG *	pcbValueData
+	LONG *	plValueData
+    PREINIT:
+	DWORD	iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( sValueData,ST(2), pcbValueData );
-	    dwErr= RegQueryValueA( hKey, sSubKey, sValueData, pcbValueData );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( sValueData,ST(2), pcbValueData );
-		dwErr= RegQueryValueA(
-		  hKey, sSubKey, sValueData, pcbValueData );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( sValueData,ST(2), plValueData,ST(3) );
+	iErr= RegQueryValueA( hKey, sSubKey, sValueData, plValueData );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(3))  ) {
+	    grow_buf_pl( sValueData,ST(2), plValueData,ST(3) );
+	    iErr= RegQueryValueA( hKey, sSubKey, sValueData, plValueData );
 	}
-	trunc_buf_pcb( sValueData,ST(2), pcbValueData );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, sValueData,ST(2), plValueData );
     OUTPUT:
 	RETVAL
-	pcbValueData
+	plValueData
 
 
-LONG
-_RegQueryValueW( hKey, sSubKey, sValueData, pcbValueData )
+bool
+_RegQueryValueW( hKey, sSubKey, sValueData, plValueData )
 	HKEY	hKey
 	WCHAR *	sSubKey
 	WCHAR *	sValueData
-	LONG *	pcbValueData
+	LONG *	plValueData
+    PREINIT:
+    	DWORD	iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( sValueData,ST(2), pcbValueData );
-	    dwErr= RegQueryValueW( hKey, sSubKey, sValueData, pcbValueData );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( sValueData,ST(2), pcbValueData );
-		dwErr= RegQueryValueW(
-		  hKey, sSubKey, sValueData, pcbValueData );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( sValueData,ST(2), plValueData,ST(3) );
+	iErr= RegQueryValueW( hKey, sSubKey, sValueData, plValueData );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(3))  ) {
+	    grow_buf_pl( sValueData,ST(2), plValueData,ST(3) );
+	    iErr= RegQueryValueW( hKey, sSubKey, sValueData, plValueData );
 	}
-	trunc_buf_pcb( sValueData,ST(2), pcbValueData );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, sValueData,ST(2), plValueData );
     OUTPUT:
 	RETVAL
-	pcbValueData
+	plValueData
 
 
-LONG
-_RegQueryValueExA( hKey, sValueName, pNull, piType, pValueData, pcbValueData )
+bool
+_RegQueryValueExA( hKey, sValueName, pNull, piType, pValueData, plValueData )
 	HKEY	hKey
 	char *	sValueName
 	DWORD *	pNull
 	DWORD *	piType
 	BYTE *	pValueData
-	DWORD *	pcbValueData
+	DWORD *	plValueData
+    PREINIT:
+	DWORD	iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( pValueData,ST(4), pcbValueData );
-	    if(  NULL == piType  )
-		piType= (DWORD *) _alloca( sizeof(DWORD) );
-	    dwErr= RegQueryValueExA(
-	      hKey, sValueName, pNull, piType, pValueData, pcbValueData );
-	    if(  ERROR_MORE_DATA == dwErr  ) {
-		grow_buf_pcb( pValueData,ST(4), pcbValueData );
-		dwErr= RegQueryValueExA(
-		  hKey, sValueName, pNull, piType, pValueData, pcbValueData );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( pValueData,ST(4), plValueData,ST(5) );
+	if(  NULL == piType  &&  NULL != pValueData  &&  null_arg(ST(5))  )
+	    piType= (DWORD *) _alloca( sizeof(DWORD) );
+	iErr= RegQueryValueExA(
+	  hKey, sValueName, pNull, piType, pValueData, plValueData );
+	if(  ERROR_MORE_DATA == iErr  &&  autosize(ST(5))  ) {
+	    grow_buf_pl( pValueData,ST(4), plValueData,ST(5) );
+	    iErr= RegQueryValueExA(
+	      hKey, sValueName, pNull, piType, pValueData, plValueData );
 	}
-	trunc_buf_pcb( pValueData,ST(4), pcbValueData );
-	/* Strip trailing '\0' from string value data: */
-	if(  RETVAL  &&  NULL != pValueData  &&  NULL != pcbValueData
-	 &&  REG_SZ == *piType  ||  REG_EXPAND_SZ == *piType  )
-	    SvCUR_set( ST(4), *pcbValueData-1 );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, pValueData,ST(4), plValueData );
+	/* Traim trailing '\0' from REG*_SZ values if plValueData was C<[]>: */
+	if(  RETVAL  &&  NULL != pValueData  &&  NULL != piType
+	 &&  ( REG_SZ == *piType || REG_EXPAND_SZ == *piType )
+	 &&  null_arg(ST(5))  &&  '\0' == pValueData[*plValueData-1]  )
+	    SvCUR_set( ST(4), --*plValueData );
     OUTPUT:
 	RETVAL
 	pNull
 	piType
-	pcbValueData
+	plValueData
 
 
-LONG
-_RegQueryValueExW( hKey, sValueName, pNull, piType, pValueData, pcbValueData )
+bool
+_RegQueryValueExW( hKey, sValueName, pNull, piType, pValueData, plValueData )
 	HKEY	hKey
 	WCHAR *	sValueName
 	DWORD *	pNull
 	DWORD *	piType
 	BYTE *	pValueData
-	DWORD *	pcbValueData
+	DWORD *	plValueData
+    PREINIT:
+	DWORD	iErr;
     CODE:
-	{ DWORD dwErr;
-	    grow_buf_pcb( pValueData,ST(4), pcbValueData );
-	    RETVAL= RegQueryValueExW(
-	      hKey, sValueName, pNull, piType, pValueData, pcbValueData );
-	    if(  ERROR_MORE_DATA == RETVAL  ) {
-		grow_buf_pcb( pValueData,ST(4), pcbValueData );
-		RETVAL= RegQueryValueExW(
-		  hKey, sValueName, pNull, piType, pValueData, pcbValueData );
-	    }
-	    RETVAL= ErrorRet( dwErr );
+	grow_buf_pl( pValueData,ST(4), plValueData,ST(5) );
+	if(  NULL == piType  &&  NULL != pValueData  &&  null_arg(ST(7))  )
+	    piType= (DWORD *) _alloca( sizeof(DWORD) );
+	iErr= RegQueryValueExW(
+	  hKey, sValueName, pNull, piType, pValueData, plValueData );
+	if(  ERROR_MORE_DATA == RETVAL  &&  autosize(ST(5))  ) {
+	    grow_buf_pl( pValueData,ST(4), plValueData,ST(5) );
+	    iErr= RegQueryValueExW(
+	      hKey, sValueName, pNull, piType, pValueData, plValueData );
 	}
-	trunc_buf_pcb( pValueData,ST(4), pcbValueData );
+	RETVAL= ErrorRet( iErr );
+	trunc_buf_pl( RETVAL, pValueData,ST(4), plValueData );
+	/* Traim trailing L'\0' from REG*_SZ values if plValueData was C<[]>: */
+	if(  RETVAL  &&  NULL != pValueData  &&  NULL != piType
+	 &&  ( REG_SZ == *piType || REG_EXPAND_SZ == *piType )
+	 &&  null_arg(ST(5))  &&  '\0' == pValueData[*plValueData-1]  )
+	    SvCUR_set( ST(4), sizeof(WCHAR)*(--*plValueData) );
     OUTPUT:
 	RETVAL
 	pNull
 	piType
-	pcbValueData
+	plValueData
 
 
-LONG
+bool
 RegReplaceKeyA( hKey, sSubKey, sNewFile, sOldFile )
 	HKEY	hKey
 	char *	sSubKey
@@ -1337,7 +1204,7 @@ RegReplaceKeyA( hKey, sSubKey, sNewFile, sOldFile )
 	RETVAL
 
 
-LONG
+bool
 RegReplaceKeyW( hKey, sSubKey, sNewFile, sOldFile )
 	HKEY	hKey
 	WCHAR *	sSubKey
@@ -1350,7 +1217,7 @@ RegReplaceKeyW( hKey, sSubKey, sNewFile, sOldFile )
 	RETVAL
 
 
-LONG
+bool
 RegRestoreKeyA( hKey, sFileName, iFlags )
 	HKEY	hKey
 	char *	sFileName
@@ -1361,7 +1228,7 @@ RegRestoreKeyA( hKey, sFileName, iFlags )
 	RETVAL
 
 
-LONG
+bool
 RegRestoreKeyW( hKey, sFileName, iFlags )
 	HKEY	hKey
 	WCHAR *	sFileName
@@ -1372,7 +1239,7 @@ RegRestoreKeyW( hKey, sFileName, iFlags )
 	RETVAL
 
 
-LONG
+bool
 RegSaveKeyA( hKey, sFileName, pSecAttr )
 	HKEY			hKey
 	char *			sFileName
@@ -1383,7 +1250,7 @@ RegSaveKeyA( hKey, sFileName, pSecAttr )
 	RETVAL
 
 
-LONG
+bool
 RegSaveKeyW( hKey, sFileName, pSecAttr )
 	HKEY			hKey
 	WCHAR *			sFileName
@@ -1394,7 +1261,7 @@ RegSaveKeyW( hKey, sFileName, pSecAttr )
 	RETVAL
 
 
-LONG
+bool
 RegSetKeySecurity( hKey, iSecInfo, pSecDesc )
 	HKEY			hKey
 	SECURITY_INFORMATION	iSecInfo
@@ -1405,73 +1272,85 @@ RegSetKeySecurity( hKey, iSecInfo, pSecDesc )
 	RETVAL
 
 
-LONG
-_RegSetValueA( hKey, sSubKey, iType, sValueData, cbValueData )
+bool
+_RegSetValueA( hKey, sSubKey, iType, sValueData, lValueData )
 	HKEY	hKey
 	char *	sSubKey
 	DWORD	iType
 	char *	sValueData
-	DWORD	cbValueData
+	DWORD	lValueData
     CODE:
-	if(  0 == cbValueData  )
-	    cbValueData= SvCUR( ST(3) );
+	if(  0 == lValueData  )
+	    lValueData= SvCUR( ST(3) );
 	RETVAL= ErrorRet(
-	  RegSetValueA( hKey, sSubKey, iType, sValueData, cbValueData )  );
+	  RegSetValueA( hKey, sSubKey, iType, sValueData, lValueData )  );
     OUTPUT:
 	RETVAL
 
 
-LONG
-_RegSetValueW( hKey, sSubKey, iType, sValueData, cbValueData )
+bool
+_RegSetValueW( hKey, sSubKey, iType, sValueData, lValueData )
 	HKEY	hKey
 	WCHAR *	sSubKey
 	DWORD	iType
 	WCHAR *	sValueData
-	DWORD	cbValueData
+	DWORD	lValueData
     CODE:
-	if(  0 == cbValueData  )
-	    cbValueData= SvCUR( ST(3) );
+	if(  0 == lValueData  )
+	    lValueData= SvCUR( ST(3) ) / sizeof(WCHAR);
 	RETVAL= ErrorRet(
-	  RegSetValueW( hKey, sSubKey, iType, sValueData, cbValueData )  );
+	  RegSetValueW( hKey, sSubKey, iType, sValueData, lValueData )  );
     OUTPUT:
 	RETVAL
 
 
-LONG
-_RegSetValueExA( hKey, sValueName, iZero, iType, pValueData, cbValueData )
+bool
+_RegSetValueExA( hKey, sValueName, iZero, iType, pValueData, lValueData )
 	HKEY	hKey
 	char *	sValueName
 	DWORD	iZero
 	DWORD	iType
 	BYTE *	pValueData
-	DWORD	cbValueData
+	DWORD	lValueData
     CODE:
-	if(  0 == cbValueData  )
-	    cbValueData= SvCUR( ST(4) );
+	if(  0 == lValueData  ) {
+	    lValueData= SvCUR( ST(4) );
+	    if(  ( REG_SZ == iType || REG_EXPAND_SZ == iType )
+	     &&  '\0' != pValueData[lValueData-1]  ) {
+		sv_catpvn( ST(4), "", 1 );
+		lValueData= SvCUR( ST(4) );
+	    }
+	}
 	RETVAL= ErrorRet(  RegSetValueExA(
-	  hKey, sValueName, iZero, iType, pValueData, cbValueData )  );
+	  hKey, sValueName, iZero, iType, pValueData, lValueData )  );
     OUTPUT:
 	RETVAL
 
 
-LONG
-_RegSetValueExW( hKey, sValueName, iZero, iType, pValueData, cbValueData )
+bool
+_RegSetValueExW( hKey, sValueName, iZero, iType, pValueData, lValueData )
 	HKEY	hKey
 	WCHAR *	sValueName
 	DWORD	iZero
 	DWORD	iType
 	BYTE *	pValueData
-	DWORD	cbValueData
+	DWORD	lValueData
     CODE:
-	if(  0 == cbValueData  )
-	    cbValueData= SvCUR( ST(4) );
+	if(  0 == lValueData  ) {
+	    lValueData= SvCUR( ST(4) );
+	    if(  ( REG_SZ == iType || REG_EXPAND_SZ == iType )
+	     &&  L'\0' != ((WCHAR *)pValueData)[lValueData-1]  ) {
+		sv_catpvn( ST(4), (char *)L"", sizeof(WCHAR) );
+		lValueData= SvCUR( ST(4) ) / sizeof(WCHAR);
+	    }
+	}
 	RETVAL= ErrorRet(  RegSetValueExW(
-	  hKey, sValueName, iZero, iType, pValueData, cbValueData )  );
+	  hKey, sValueName, iZero, iType, pValueData, lValueData )  );
     OUTPUT:
 	RETVAL
 
 
-LONG
+bool
 RegUnLoadKeyA( hKey, sSubKey )
 	HKEY	hKey
 	char *	sSubKey
@@ -1481,7 +1360,7 @@ RegUnLoadKeyA( hKey, sSubKey )
 	RETVAL
 
 
-LONG
+bool
 RegUnLoadKeyW( hKey, sSubKey )
 	HKEY	hKey
 	WCHAR *	sSubKey

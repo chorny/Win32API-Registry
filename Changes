@@ -16,3 +16,12 @@ Revision history for Perl extension Win32API::Registry.
 
 0.12  Mon Dec 29 09:55:30 1997 
 	- Add AllowPriv() function so can load and save keys.
+
+0.13  Fri Jul 10 08:34:26 1998
+	- Added "buffers.h" to standardized how buffer arguments are handled.
+	- Declared all return values as C<bool> [not C<LONG>].
+	- Minor adjustments to variable names (and Hungarian notation).
+	- Allow buffer sizes like C<"=99"> to prevent automatic resizing.
+	- Trim or add '\0' to REG*_SZ values but only when buffer size omitted
+	  [for RegEnumValue*(), RegQueryValueEx*(), and RegSetValueEx*()].
+	- POD finished.
