@@ -6,9 +6,10 @@ package ExtUtils::Myconst2perl;
 use strict;
 use Config;
 
-use base "Exporter";
-use vars qw( @EXPORT @EXPORT_OK $VERSION );
+use vars qw( @ISA @EXPORT @EXPORT_OK $VERSION );
 BEGIN {
+    require Exporter;
+    push @ISA, 'Exporter';
     @EXPORT= qw( &Myconst2perl );
     @EXPORT_OK= qw( &ParseAttribs );
     $VERSION= 1.00;
@@ -43,6 +44,7 @@ sub ParseAttribs
     my $ccode= $hvAttr->{C_PE_CODE} ||
 	'last if m#/[/*]\s*CONSTS_DEFINED\b|^\s*MODULE\b#';
     my $ifdef= $hvAttr->{IFDEF} || 0;
+    my $values= $hvAttr->{VALUES} || {};
     my $writeperl= !! $hvAttr->{WRITE_PERL};
     my $export= !! $hvAttr->{DO_EXPORT};
     my $importto= $hvAttr->{IMPORT_TO} || "_constants";
@@ -68,6 +70,7 @@ sub ParseAttribs
 	IMPORT_LIST => \@importlist,
 	SUBROUTINE => \$subroutine,
 	IFDEF => \$ifdef,
+	VALUES => $values,
 	WRITE_PERL => \$writeperl,
 	CPLUSPLUS => \$cplusplus,
 	BASEFILENAME => \$base,
@@ -184,13 +187,14 @@ whose name is the constant's name and whose value is the constant's value.
 sub Myconst2perl
 {
     my( $pkg, %spec )= @_;
-    my( $outfile, $writeperl, $ifdef, $export, $importto, @importlist,
+    my( $outfile, $writeperl, $ifdef, %values, $export, $importto, @importlist,
         @perlfile, %perlcode, @cfile, %ccode, $routine );
     ParseAttribs( $pkg, \%spec, {
 	DO_EXPORT => \$export,
 	IMPORT_TO => \$importto,
 	IMPORT_LIST => \@importlist,
 	IFDEF => \$ifdef,
+	VALUES => \%values,
 	WRITE_PERL => \$writeperl,
 	OUTFILE => \$outfile,
 	PERL_FILE_LIST => \@perlfile,
@@ -228,7 +232,7 @@ sub Myconst2perl
 	if(  $writeperl  ) {
 	    # Here are more reasons why the WRITE_PERL option is discouraged.
 	    if(  $Config{useperlio}  ) {
-		print "#define PERLIO_IS_STDIO 1\n";
+		print "#define PERLIO_IS_STDIO\n";
 	    }
 	    print "#define WIN32IO_IS_STDIO 1\n";	# May cause a warning
 	    print "#define NO_XSLOCKS 1\n";	# What a hack!
@@ -341,8 +345,12 @@ sub Myconst2perl
 	} else {
 	    $if= "$if\n";
 	}
-	print $if
-	  . qq[    const2perl( $const );\n];
+	print $if;
+	if(  $values{$const}  ) {
+	    print qq[    mkperlconst( "$const", $values{$const} );\n];
+	} else {
+	    print qq[    const2perl( $const );\n];
+	}
 	if(  $if  ) {
 	    print "#else\n"
 	      . qq[    noconst( $const );\n]

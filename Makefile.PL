@@ -7,12 +7,24 @@ use strict;
 WriteMakefile(
     'NAME'		=> 'Win32API::Registry',
     'VERSION_FROM'	=> 'Registry.pm',	# finds $VERSION
-    (  $] < 5.005  ||  5.006 <= $]   ?  ()  :  ( 'CAPI' => 'TRUE' )  ),
-    (  $] < 5.007  ?  'postamble'  :  'CONST2PERL'  )
-		=> { IMPORT_LIST => [qw(/._/ !/[a-z]/)],
+    (  $Config{archname} =~ /-object\b/i  ?  ( 'CAPI' => 'TRUE' )  :  ()  ),
+    (  $] < 5.005  ?  ()  :
+	( 'AUTHOR'		=> 'Tye McQueen <tye@metronet.com>',
+	  'ABSTRACT_FROM'	=> 'Registry.pm' )
+    ),
+    (	# 5.008 <= $]  ?  'CONST2PERL'  :	# Will this ever work? /:
+        'postamble'
+    )		=> { IMPORT_LIST => [qw(/._/ !/[a-z]/)],
 		     IFDEF => q{ /^SE_/ ? '__cplusplus' : /REG_/ },
 		     CPLUSPLUS => 1,
 		     WRITE_PERL => 1,
+		     VALUES => {
+			KEY_DELETE => 'DELETE',
+			KEY_READ_CONTROL => 'READ_CONTROL',
+			KEY_WRITE_DAC => 'WRITE_DAC',
+			KEY_WRITE_OWNER => 'WRITE_OWNER',
+			KEY_SYNCHRONIZE => 'SYNCHRONIZE', # (not used)
+		     },
 		     # Comment out next line to rebuild constants defs:
 		     NO_REBUILD => 1,
 		   },
@@ -98,12 +110,12 @@ pm_to_blib: ${_final}_to_blib
 ${_final}_to_blib: $final
 	" . '@$(PERL) "-I$(INST_ARCHLIB)" "-I$(INST_LIB)" \\
 	"-I$(PERL_ARCHLIB)" "-I$(PERL_LIB)" -MExtUtils::Install \\
-        -e "pm_to_blib({',neatvalue($final),',',
-	neatvalue($self->catfile('$(INST_ARCHLIB)',@path,$final)), '},',
+        -e "pm_to_blib({ ',neatvalue($final),',',
+	neatvalue($self->catfile('$(INST_ARCHLIB)',@path,$final)), ' },',
 	neatvalue($self->catfile(qw[$(INST_LIB) auto])), ')"
-	@$(TOUCH) ',$final,"\n";
+	@$(TOUCH) ', $_final, "_to_blib\n";
 
-	    push( @clean, $outfile, $bin, $obj );
+	    push( @clean, $outfile, $bin, $obj, $_final . "_to_blib" );
 	    push( @realclean, $final )   unless  $noreb;
 	} else {
 

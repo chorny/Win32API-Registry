@@ -4,7 +4,7 @@ package Win32API::Registry;
 
 use strict;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS); #@EXPORT_FAIL);
-$VERSION= '0.21';
+$VERSION= '0.23';
 
 require Exporter;
 require DynaLoader;
@@ -13,7 +13,7 @@ require DynaLoader;
 @EXPORT= qw();
 %EXPORT_TAGS= (
     Func =>	[qw(		regConstant		regLastError
-    	AllowPriv		AbortSystemShutdown	InitiateSystemShutdown
+	AllowPriv		AbortSystemShutdown	InitiateSystemShutdown
 	RegCloseKey		RegConnectRegistry	RegCreateKey
 	RegCreateKeyEx		RegDeleteKey		RegDeleteValue
 	RegEnumKey		RegEnumKeyEx		RegEnumValue
@@ -49,7 +49,13 @@ require DynaLoader;
 	KEY_QUERY_VALUE		KEY_SET_VALUE		KEY_CREATE_SUB_KEY
 	KEY_ENUMERATE_SUB_KEYS	KEY_NOTIFY		KEY_CREATE_LINK
 	KEY_READ		KEY_WRITE		KEY_EXECUTE
-	KEY_ALL_ACCESS )],
+	KEY_ALL_ACCESS),
+	'KEY_DELETE',		# DELETE          (0x00010000L)
+	'KEY_READ_CONTROL',	# READ_CONTROL    (0x00020000L)
+	'KEY_WRITE_DAC',	# WRITE_DAC       (0x00040000L)
+	'KEY_WRITE_OWNER',	# WRITE_OWNER     (0x00080000L)
+	'KEY_SYNCHRONIZE',	# SYNCHRONIZE     (0x00100000L) (not used)
+	],
     REG_ =>	[qw(
 	REG_OPTION_RESERVED	REG_OPTION_NON_VOLATILE	REG_OPTION_VOLATILE
 	REG_OPTION_CREATE_LINK	REG_OPTION_BACKUP_RESTORE
@@ -1452,7 +1458,7 @@ For each parameter that specifies a buffer size, a value of C<0>
 can be passed.  For parameter that are pointers to buffer sizes,
 you can also pass in C<NULL> by specifying an empty list reference,
 C<[]>.  Both of these cases will ensure that the variable has
-E<some> buffer space allocated to it and pass in that buffer's
+I<some> buffer space allocated to it and pass in that buffer's
 allocated size.  Many of the calls indicate, via C<ERROR_MORE_DATA>,
 that the buffer size was not sufficient and the F<Registry.xs>
 code will automatically enlarge the buffer to the required size
@@ -1482,7 +1488,7 @@ buffer based on the underlying routine requesting more space.
 Some Reg*() calls may not currently set the buffer size when they
 return C<ERROR_MORE_DATA>.  But some that are not documented as
 doing so, currently do so anyway.  So the code assumes that any
-routine E<might> do this and resizes any buffers and repeats the
+routine I<might> do this and resizes any buffers and repeats the
 call.   We hope that eventually all routines will provide this
 feature.
 

@@ -166,7 +166,7 @@ print $ok ? "" : "not ", "ok 20\n";
 $Debug  and  warn "# Using closed key gives:  `",regLastError(),"'.\n";
 
 $ok= (  regLastError() =~ /handle/i  &&  regLastError() =~ /invali/i  );
-print $ok ? "" : "not ", "ok 21\n";
+print $ok ? "" : "# ".regLastError()."\nnot ", "ok 21\n";
 
 $ok= (  $type == $vtype  &&  $data eq $vdata  );
 print $ok ? "" : "not ", "ok 22\n";

@@ -1,7 +1,7 @@
 /* Win32API/Registry.xs */
 
 #ifdef __cplusplus
-extern "C" {
+//extern "C" {
 #endif
 
 #include "EXTERN.h"
@@ -17,7 +17,7 @@ extern "C" {
 #include <windows.h>
 
 #ifdef __cplusplus
-}
+//}
 #endif
 
 /*CONSTS_DEFINED*/
@@ -888,7 +888,7 @@ _RegQueryValueExA( hKey, sName, pNull, ouType, opData, iolData )
     PREINIT:
 	DWORD	uErr;
     CODE:
-	if(  NULL == ouType  &&  NULL != opData  &&  null_arg(ST(5))  )
+	if(  NULL == ouType  &&  null_arg(ST(5))  )
 	    ouType= (DWORD *) TempAlloc( sizeof(DWORD) );
 	init_buf_pl( iolData,ST(5),DWORD * );
 	grow_buf_pl( opData,ST(4),BYTE *, iolData,ST(5),DWORD * );
@@ -924,7 +924,7 @@ _RegQueryValueExW( hKey, swName, pNull, ouType, opData, iolData )
     PREINIT:
 	DWORD	uErr;
     CODE:
-	if(  NULL == ouType  &&  NULL != opData  &&  null_arg(ST(7))  )
+	if(  NULL == ouType  &&  null_arg(ST(5))  )
 	    ouType= (DWORD *) TempAlloc( sizeof(DWORD) );
 	init_buf_pl( iolData,ST(5),DWORD * );
 	grow_buf_pl( opData,ST(4),BYTE *, iolData,ST(5),DWORD * );
