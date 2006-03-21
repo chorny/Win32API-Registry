@@ -140,7 +140,7 @@ AllowPriv( sPrivName, bEnable )
 	) {
 	    SetLastError( ERROR_SUCCESS );
 	    AdjustTokenPrivileges( hToken, FALSE, &tokPrivNew,
-	      NULL, NULL, NULL );
+	      0, NULL, NULL );
 	    if(  ERROR_SUCCESS == GetLastError()  ) {
 		RETVAL= TRUE;
 	    }

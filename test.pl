@@ -76,7 +76,7 @@ print $ok ? "" : "not ", "ok 10\n";
 $path= $key;
 while(  0 == $nvals  ) {
 
-    $ok= RegEnumKeyEx( $hkey, $nkeys-1, $key2, $klen2=2*$zero,
+    $ok= RegEnumKeyEx( $hkey, $nkeys-2, $key2, $klen2=2*$zero,
 		       [], $class2, $clen2=1*$zero, $time );
     $ok  or  die "Can't find key with values:  ",regLastError(),"\n";
     $Debug  and  warn

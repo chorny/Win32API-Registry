@@ -1,5 +1,9 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.24:  2006-03-22
+       - Allow it to build and install with Vanilla Perl 5.8.8 with mingw 
+         gcc 3.4.5 on Windows XP SP2 without warnings.
+
 0.23:  2002-06-11
        - Allow it to build with Perl 5.8 (is that here already?)
        - Add DELETE/READ_CONTROL/WRITE_DAC/WRITE_OWNER/SYNCHRONIZE as KEY_*
