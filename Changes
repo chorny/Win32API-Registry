@@ -1,5 +1,9 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.25:  2006-04-03
+       - Add no_index to META.yml to prevent indexing of modules under ExtUtils
+         directory contained in the distribution. 
+
 0.24:  2006-03-22
        - Allow it to build and install with Vanilla Perl 5.8.8 with mingw 
          gcc 3.4.5 on Windows XP SP2 without warnings.
