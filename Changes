@@ -1,5 +1,8 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.26:  2006-04-03
+       - Fix no_index: on the Extutils directory.
+
 0.25:  2006-04-03
        - Add no_index to META.yml to prevent indexing of modules under ExtUtils
          directory contained in the distribution. 
