@@ -28,6 +28,12 @@ WriteMakefile(
 		     # Comment out next line to rebuild constants defs:
 		     NO_REBUILD => 1,
 		   },
+    EXTRA_META      => <<'META',
+no_index:
+    dir:
+        - ExtUtils
+META
+
     (  ! $Config{libperl}  ?  ()  :  ( LIBPERL_A => $Config{libperl} )  ),
 );
 

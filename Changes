@@ -1,5 +1,9 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.27:  2006-04-04
+       - Fix no_index: on the Extutils directory now using the 6.30_01 
+         version of ExtUtils::MakeMaker.
+
 0.26:  2006-04-03
        - Fix no_index: on the Extutils directory.
 

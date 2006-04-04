@@ -4,7 +4,7 @@ package Win32API::Registry;
 
 use strict;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS); #@EXPORT_FAIL);
-$VERSION= '0.26';
+$VERSION= '0.27';
 
 require Exporter;
 require DynaLoader;
