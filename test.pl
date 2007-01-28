@@ -201,9 +201,9 @@ $ok=  ! eval { AbortSystemShutdown( [] ) }  &&  $@ eq "";
 $Debug && $@ && warn "# \$@=$@\n";
 print $ok ? "" : "not ", "ok 26\n";
 
-$ok=  ! eval { InitiateSystemShutdown([],[],0,0,0) }  &&  $@ eq "";
-$Debug && $@ && warn "# \$@=$@\n";
-print $ok ? "" : "not ", "ok 27\n";
+# $ok=  ! eval { InitiateSystemShutdown([],[],0,0,0) }  &&  $@ eq "";
+# $Debug && $@ && warn "# \$@=$@\n";
+# print $ok ? "" : "not ", "ok 27\n";
 
 $ok=  ! eval { RegCloseKey(0) }  &&  $@ eq "";
 $Debug && $@ && warn "# \$@=$@\n";

@@ -1,5 +1,11 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.28:  2007-01-27
+       - Fix no_index: according to discussion on modules@perl.org 6-Jul-06 
+         the correct no_index modifier is directory not dir.
+       - Comment out the test that shuts down the computer. 
+         (InitiateSystemShutdown) 
+
 0.27:  2006-04-04
        - Fix no_index: on the Extutils directory now using the 6.30_01 
          version of ExtUtils::MakeMaker.

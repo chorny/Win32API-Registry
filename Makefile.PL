@@ -30,7 +30,7 @@ WriteMakefile(
 		   },
     EXTRA_META      => <<'META',
 no_index:
-    dir:
+    directory:
         - ExtUtils
 META
 

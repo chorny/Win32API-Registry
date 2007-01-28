@@ -1,15 +1,16 @@
 --- #YAML:1.0
 name:                Win32API-Registry
-version:             0.27
+version:             0.28
 abstract:            Low-level access to Win32 system API calls from WINREG.H
-license:             unknown
-generated_by:        ExtUtils::MakeMaker version 6.30_01
-author:              Tye McQueen <tye@metronet.com>
+license:             ~
+generated_by:        ExtUtils::MakeMaker version 6.31
 distribution_type:   module
 requires:     
 meta-spec:
-    url: <http://module-build.sourceforge.net/META-spec-new.html>;
-    version: 1.1
+    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
+    version: 1.2
+author:
+    - Tye McQueen <tye@metronet.com>
 no_index:
-    dir:
+    directory:
         - ExtUtils
