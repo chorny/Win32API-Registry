@@ -1,5 +1,11 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.29:  2008-04-11
+       - Fix missing seperator in Makefile error when using GNU Make by 
+         applying the patch from Reini Urban <RURBAN@cpan.org> RT#31849.
+       - Remove parameter from Makefile.PL that Makemaker no longer 
+         understands (EXTRA_META).
+
 0.28:  2007-01-27
        - Fix no_index: according to discussion on modules@perl.org 6-Jul-06 
          the correct no_index modifier is directory not dir.

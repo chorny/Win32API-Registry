@@ -28,12 +28,6 @@ WriteMakefile(
 		     # Comment out next line to rebuild constants defs:
 		     NO_REBUILD => 1,
 		   },
-    EXTRA_META      => <<'META',
-no_index:
-    directory:
-        - ExtUtils
-META
-
     (  ! $Config{libperl}  ?  ()  :  ( LIBPERL_A => $Config{libperl} )  ),
 );
 
@@ -134,9 +128,9 @@ ${_final}_to_blib: $final
 
     push @m, "
 clean ::
-    $self->{RM_F} @clean\n"   if  @clean;
-    push @m, "
+	$self->{RM_F} @clean\n"   if  @clean;
+	push @m, "
 realclean ::
-    $self->{RM_F} @realclean\n"   if  @realclean;
-    return join('',@m);
+	$self->{RM_F} @realclean\n"   if  @realclean;
+	return join('',@m);
 }
