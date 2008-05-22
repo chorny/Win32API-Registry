@@ -1,5 +1,13 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.30:  2008-05-22
+       - Patch applied RT#35390: Win64 compatibility from 
+         JDB <JDB [...] cpan.org>
+       - Patch reinstates the ok output for commented test until I refresh 
+         the tests to use Test::More.
+       - Patch fixes issues with win64 alignment changes.
+       - Patch adds appropriate casts to eliminate compiler warnings.
+
 0.29:  2008-04-11
        - Fix missing seperator in Makefile error when using GNU Make by 
          applying the patch from Reini Urban <RURBAN@cpan.org> RT#31849.

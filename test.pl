@@ -7,8 +7,9 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..211\n"; }
+BEGIN { $| = 1; print "1..216\n"; }
 END {print "not ok 1\n" unless $loaded;}
+use Config qw(%Config);
 use Win32API::Registry qw(:ALL);
 $loaded = 1;
 print "ok 1\n";
@@ -143,19 +144,20 @@ $Debug  and  warn "# length(data)=",length($data)," length(vdata)=",
   length($vdata), " dlen=$dlen, vdlen=$vdlen.\n";
 print $ok ? "" : "not ", "ok 16\n";
 
-$pValueEnts= pack( " p x4 x4 x4 " x @valnames, @valnames );
+my $skip = "x$Config{ptrsize}";
+my $pad = $Config{ptrsize} == 8 ? "x4" : "";
+$pValueEnts= pack( " p $skip $skip $skip" x @valnames, @valnames );
 $ok= RegQueryMultipleValues( $hkey, $pValueEnts, 0+@valnames, $buffer, 1 );
 print $ok ? "" : "not ", "ok 17\n";
 
-@lens=  unpack( " x4 L x4 x4 " x @valnames, $pValueEnts );
-@types= unpack( " x4 x4 x4 L " x @valnames, $pValueEnts );
-@dat1=  unpack(  join( "", map(" x4 x4 P$_ x4 ",@lens) ), $pValueEnts  );
+@lens=  unpack( " $skip L $pad $skip $skip " x @valnames, $pValueEnts );
+@types= unpack( " $skip $skip $skip L $pad " x @valnames, $pValueEnts );
+@dat1=  unpack( join( "", map(" $skip $skip P$_ $skip ",@lens) ), $pValueEnts );
 @dat2=  unpack( join("",map("a$_",@lens)), $buffer );
 if(  $ok= ( @dat1==@dat2 && @dat1==@types )  ) {
     for(0..$#dat1) { if( $dat1[$_] ne $dat2[$_] ) { $ok= 0; last; } }
 }
 print $ok ? "" : "not ", "ok 18\n";
-
 
 $ok= RegCloseKey( $hkey );
 $Debug && !$ok  and  warn "# ",regLastError(),"\n";
@@ -201,9 +203,10 @@ $ok=  ! eval { AbortSystemShutdown( [] ) }  &&  $@ eq "";
 $Debug && $@ && warn "# \$@=$@\n";
 print $ok ? "" : "not ", "ok 26\n";
 
+$ok= 1;
 # $ok=  ! eval { InitiateSystemShutdown([],[],0,0,0) }  &&  $@ eq "";
 # $Debug && $@ && warn "# \$@=$@\n";
-# print $ok ? "" : "not ", "ok 27\n";
+print $ok ? "" : "not ", "ok 27\n";
 
 $ok=  ! eval { RegCloseKey(0) }  &&  $@ eq "";
 $Debug && $@ && warn "# \$@=$@\n";
