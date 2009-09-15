@@ -1,5 +1,12 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.30_01:  2009-09-15
+       - Include LICENSE file.  License for Win32API::Registry is same as what 
+         it is for Perl: Dual GPL v1 or higher and Artistic License. 
+       - Move to using Module::Build so that META.yml is generated correctly.
+       - Reorganised files in archive to be a more modern layout mostly to make 
+         moving to Module::Build easier.
+
 0.30:  2008-05-22
        - Patch applied RT#35390: Win64 compatibility from 
          JDB <JDB [...] cpan.org>
