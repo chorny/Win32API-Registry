@@ -4,7 +4,7 @@ package Win32API::Registry;
 
 use strict;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS); #@EXPORT_FAIL);
-$VERSION= '0.30_01';
+$VERSION= '0.31';
 
 require Exporter;
 require DynaLoader;
@@ -1412,6 +1412,8 @@ in the C<":ALL"> grouping.
 
 =back
 
+=back
+
 =head2 The Win32API:: heirarchy
 
 This and the other Win32API:: modules are meant to expose the
@@ -1725,6 +1727,7 @@ to a C [packed] array of pointers to other things.
 Here we have a list of pointers packed into a single Perl string.
 
 =back
+
 
 =head1 BUGS
 

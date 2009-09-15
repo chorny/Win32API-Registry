@@ -1,5 +1,8 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.31:  2009-09-15
+       - Fix pod error.
+
 0.30_01:  2009-09-15
        - Include LICENSE file.  License for Win32API::Registry is same as what 
          it is for Perl: Dual GPL v1 or higher and Artistic License. 

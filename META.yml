@@ -1,6 +1,6 @@
 ---
 name: Win32API-Registry
-version: 0.30_01
+version: 0.31
 author:
   - 'Tye McQueen, tye@metronet.com, http://www.metronet.com/~tye/.'
 abstract: Low-level access to Win32 system API calls from WINREG.H
@@ -15,7 +15,7 @@ provides:
     version: 1
   Win32API::Registry:
     file: lib/Win32API/Registry.pm
-    version: 0.30_01
+    version: 0.31
 generated_by: Module::Build version 0.280802
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
