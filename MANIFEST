@@ -1,16 +1,15 @@
-Build.PL
 Changes
-lib/buffers.h
-lib/const2perl.h
-lib/cRegistry.h
-lib/cRegistry.pc
-lib/ExtUtils/Myconst2perl.pm
-lib/ppport.h
-lib/Registry.xs
-lib/typemap
-lib/Win32API/Registry.pm
-LICENSE
 MANIFEST
+Makefile.PL
 README
+Registry.pm
+Registry.xs
+buffers.h
+const2perl.h
+cRegistry.h
+cRegistry.pc
+ppport.h
 test.pl
+typemap
+ExtUtils/Myconst2perl.pm
 META.yml                                 Module meta-data (added by MakeMaker)
