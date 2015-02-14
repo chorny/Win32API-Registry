@@ -1762,6 +1762,10 @@ it is not used in the stubs in F<Registry.pm>.
 
 Tye McQueen, tye@metronet.com, http://www.metronet.com/~tye/.
 
+=head1 LICENSE
+
+perl
+
 =head1 SEE ALSO
 
 =over
