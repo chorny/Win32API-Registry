@@ -4,6 +4,11 @@ use 5.005;
 use ExtUtils::MakeMaker;
 use Config;
 use strict;
+
+unless ($^O eq "MSWin32" || $^O eq "cygwin" || $^O eq "interix") { #not tested on Interix
+    die "OS unsupported\n";
+}
+
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile1(
