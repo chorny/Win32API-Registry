@@ -1,4 +1,6 @@
 #!/usr/bin/perl -w
+
+use 5.005;
 use ExtUtils::MakeMaker;
 use Config;
 use strict;
@@ -9,10 +11,8 @@ WriteMakefile(
     'VERSION_FROM'	=> 'Registry.pm',	# finds $VERSION
     'LICENSE'           => 'perl',
     (  $Config{archname} =~ /-object\b/i  ?  ( 'CAPI' => 'TRUE' )  :  ()  ),
-    (  $] < 5.005  ?  ()  :
-	( 'AUTHOR'		=> 'Tye McQueen <tye@metronet.com>',
-	  'ABSTRACT_FROM'	=> 'Registry.pm' )
-    ),
+	'AUTHOR'		=> 'Tye McQueen <tye@metronet.com>',
+	'ABSTRACT_FROM'	=> 'Registry.pm',
     (	# 5.008 <= $]  ?  'CONST2PERL'  :	# Will this ever work? /:
         'postamble'
     )		=> { IMPORT_LIST => [qw(/._/ !/[a-z]/)],
