@@ -169,7 +169,8 @@ $ok= ! RegEnumValue( $hkey, 0, $name, $nlen=0, [], $type, $data, $dlen=0 );
 print $ok ? "" : "not ", "ok 20\n";
 $Debug  and  warn "# Using closed key gives:  `",regLastError(),"'.\n";
 
-$ok= (  regLastError() =~ /handle/i  &&  regLastError() =~ /invali/i  );
+my $err = regLastError();
+$ok= (  ($err =~ /handle/i  &&  $err =~ /invali/i) || $err =~ /Неверный дескриптор/  );
 print $ok ? "" : "# ".regLastError()."\nnot ", "ok 21\n";
 
 $ok= (  $type == $vtype  &&  $data eq $vdata  );
