@@ -26,6 +26,12 @@ WriteMakefile1(
 	},
 	#TEST_REQUIRES => {
 	#},
+    $^O =~/win/i ? (
+        dist => {
+            TAR      => 'ptar',
+            TARFLAGS => '-c -C -f',
+        },
+    ) : (),
 
     (	# 5.008 <= $]  ?  'CONST2PERL'  :	# Will this ever work? /:
         'postamble'
