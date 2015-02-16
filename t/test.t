@@ -22,7 +22,7 @@ my $Debug = 0;
 
 $|= 1   if  $Debug; #= ( -t STDIN ) != ( -t STDOUT )
 
-$zero= 16;	# Change to 0 when RegEnumKeyExA() and RegEnumValueA()
+$zero= 32;	# Change to 0 when RegEnumKeyExA() and RegEnumValueA()
 		# handle ERROR_MORE_DATA better!
 
 $ok= RegQueryInfoKey( HKEY_LOCAL_MACHINE, $class, $clen=0, [],

@@ -1,5 +1,7 @@
 Revision history for Perl extension Win32API::Registry.
 
+       - Fix RT#77440
+
 0.32:  2010-04-29
        - Undo changes to move to Module::Build until I have more time to 
          work out how I broke things.
