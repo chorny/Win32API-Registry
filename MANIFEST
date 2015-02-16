@@ -11,5 +11,5 @@ cRegistry.pc
 ppport.h
 t/test.t
 typemap
-ExtUtils/Myconst2perl.pm
+inc/ExtUtils/Myconst2perl.pm
 META.yml                                 Module meta-data (added by MakeMaker)

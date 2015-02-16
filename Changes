@@ -1,6 +1,9 @@
 Revision history for Perl extension Win32API::Registry.
 
+0.32_01:
        - Fix RT#77440
+       - Fixed test 21 for Russian Windows
+       - tests moved to t/
 
 0.32:  2010-04-29
        - Undo changes to move to Module::Build until I have more time to 
