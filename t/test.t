@@ -169,9 +169,15 @@ $ok= ! RegEnumValue( $hkey, 0, $name, $nlen=0, [], $type, $data, $dlen=0 );
 print $ok ? "" : "not ", "ok 20\n";
 $Debug  and  warn "# Using closed key gives:  `",regLastError(),"'.\n";
 
-my $err = regLastError();
-$ok= (  ($err =~ /handle/i  &&  $err =~ /invali/i) || $err =~ /Неверный дескриптор/  );
-print $ok ? "" : "# ".regLastError()."\nnot ", "ok 21\n";
+require POSIX;
+$loc = POSIX::setlocale( &POSIX::LC_CTYPE);
+if ($loc eq 'English_United States.1252' || $loc eq 'Russian_Russia.1251') {
+  my $err = regLastError();
+  $ok= (  ($err =~ /handle/i  &&  $err =~ /invali/i) || $err =~ /Неверный дескриптор/  );
+  print $ok ? "" : "# ".regLastError()."\nnot ", "ok 21\n";
+} else {
+  print "ok 21 #tested only on English or Russian locales\n";
+}
 
 $ok= (  $type == $vtype  &&  $data eq $vdata  );
 print $ok ? "" : "not ", "ok 22\n";
