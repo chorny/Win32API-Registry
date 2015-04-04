@@ -285,10 +285,10 @@ Win32API::Registry - Low-level access to Win32 system API calls from WINREG.H
 
   use Win32API::Registry 0.21 qw( :ALL );
 
-  RegOpenKeyEx( HKEY_LOCAL_MACHINE, "SYSTEM\\Disk", 0, KEY_READ, $key );
+  RegOpenKeyEx( HKEY_LOCAL_MACHINE, "SYSTEM\\Disk", 0, KEY_READ, $key )
     or  die "Can't open HKEY_LOCAL_MACHINE\\SYSTEM\\Disk: ",
 	    regLastError(),"\n";
-  RegQueryValueEx( $key, "Information", [], $type, $data, [] );
+  RegQueryValueEx( $key, "Information", [], $type, $data, [] )
     or  die "Can't read HKEY_L*MACHINE\\SYSTEM\\Disk\\Information: ",
 	    regLastError(),"\n";
   [...]
